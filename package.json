@@ -27,13 +27,13 @@
   "author": "ZK Expense Splitter Contributors",
   "license": "MIT",
   "dependencies": {
-    "@midnight-ntwrk/compact-runtime": "^0.23.0",
-    "@midnight-ntwrk/midnight-js-contracts": "^0.23.0",
-    "@midnight-ntwrk/midnight-js-types": "^0.23.0",
-    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "^0.23.0",
-    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "^0.23.0",
-    "@midnight-ntwrk/midnight-js-level-private-state-provider": "^0.23.0",
-    "@midnight-ntwrk/midnight-js-network-id": "^0.23.0",
+    "@midnight-ntwrk/compact-runtime": "0.18.0-rc.1",
+    "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+    "@midnight-ntwrk/midnight-js-types": "4.1.1",
+    "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.1.1",
+    "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
     "rxjs": "^7.8.1"
   },
   "devDependencies": {

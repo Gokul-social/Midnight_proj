@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "Node16",
-    "moduleResolution": "Node16",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "./",
@@ -18,14 +18,12 @@
     "noImplicitAny": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": false
   },
   "include": [
     "src/**/*",
-    "tests/**/*",
-    "contract/**/*"
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",
@@ -33,7 +31,6 @@
     "managed"
   ],
   "ts-node": {
-    "esm": false,
-    "experimentalSpecifierResolution": "node"
+    "esm": false
   }
 }
