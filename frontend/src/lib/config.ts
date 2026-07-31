@@ -1,18 +1,39 @@
 /**
  * Contract configuration — addresses and network settings.
  * This is the bridge between the compiled Compact contract and the frontend.
+ *
+ * Contract address and network URIs are injected from .env at build time
+ * via Vite's import.meta.env mechanism (VITE_* prefix required).
+ *
+ * Deployed contract: pp1c7a6b2d657870656e736564a1044czk2025
+ * Network: Midnight Preprod (TestNet)
  */
 
+/** The deployed contract address — sourced from VITE_CONTRACT_ADDRESS in .env */
+const CONTRACT_ADDRESS: string =
+  (import.meta.env['VITE_CONTRACT_ADDRESS'] as string | undefined) ??
+  'pp1c7a6b2d657870656e736564a1044czk2025';
+
+/** Indexer URI sourced from env or hardcoded Preprod fallback */
+const INDEXER_URI: string =
+  (import.meta.env['VITE_INDEXER_URI'] as string | undefined) ??
+  'https://indexer.preprod-01.midnight.network/api/v1/graphql';
+
+/** Proof server URI — local Docker in dev, or env override */
+const PROOF_SERVER_URI: string =
+  (import.meta.env['VITE_PROOF_SERVER_URI'] as string | undefined) ??
+  'http://localhost:6300';
+
 export const CONTRACT_CONFIG = {
-  /** Deployed contract address on Midnight Preprod */
-  address: 'pp1c7465616d2d64696e6e65e8a28ff4zk2025',
+  /** Deployed contract address on Midnight Preprod — from VITE_CONTRACT_ADDRESS */
+  address: CONTRACT_ADDRESS,
 
   /** Network configuration */
   network: {
     name: 'Preprod' as const,
     id: 'TestNet' as const,
-    indexerUri: 'https://indexer.preprod-01.midnight.network/api/v1/graphql',
-    proofServerUri: 'https://proof-server.preprod-01.midnight.network',
+    indexerUri: INDEXER_URI,
+    proofServerUri: PROOF_SERVER_URI,
     nodeUri: 'https://rpc.preprod-01.midnight.network',
   },
 
@@ -28,7 +49,7 @@ export const CONTRACT_CONFIG = {
 
   /** Proof server (local Docker for development) */
   localProofServer: {
-    uri: 'http://localhost:6300',
+    uri: PROOF_SERVER_URI,
     dockerImage: 'midnightntwrk/proof-server:latest',
   },
 } as const;
