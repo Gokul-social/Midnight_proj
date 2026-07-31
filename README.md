@@ -2,6 +2,7 @@
 
 > **A production-grade, privacy-preserving group expense splitting dApp built on the Midnight Network using Compact smart contracts and zero-knowledge proofs.**
 
+[![CI — Compile, Test & Build](https://github.com/Gokul-social/Midnight_proj/actions/workflows/ci.yml/badge.svg)](https://github.com/Gokul-social/Midnight_proj/actions/workflows/ci.yml)
 [![Midnight Network](https://img.shields.io/badge/Midnight-Network-6B21A8?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://midnight.network)
 [![Language: Compact](https://img.shields.io/badge/Language-Compact-4F46E5?style=for-the-badge)](https://docs.midnight.network/develop/reference/compact/)
 [![ZK Proofs](https://img.shields.io/badge/ZK-Proofs-10B981?style=for-the-badge)](https://docs.midnight.network)
@@ -20,7 +21,7 @@ This contract solves the privacy problem using **zero-knowledge proofs**:
 - A verifiable public ledger tracks aggregate settlement progress **without exposing individual contributions**
 - The group's expense agreement is committed on-chain as a hash — **the terms are verifiable without being readable**
 
-> **Midnight Builder Program — Level 1 + Level 2 (Waxing Crescent) Submission**
+> **Midnight Builder Program — Level 1 + Level 2 + Level 3 (First Quarter) Submission**
 
 ---
 
@@ -455,4 +456,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-*Built with ❤️ for the Midnight Network Builder Program — New Moon to Full, Level 1 + Level 2 (Waxing Crescent) Submission.*
+*Built with ❤️ for the Midnight Network Builder Program — New Moon to Full, Level 1 + Level 2 + Level 3 (First Quarter) Submission.*
