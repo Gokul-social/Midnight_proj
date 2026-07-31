@@ -1,0 +1,201 @@
+@import "tailwindcss";
+
+/* ============================================================
+   ZK Expense Splitter — Design System
+   Midnight-inspired dark theme with privacy-centric UI palette
+   ============================================================ */
+
+@theme {
+  /* Core brand colors — Midnight purple gradient family */
+  --color-midnight-950: #0a0a1a;
+  --color-midnight-900: #0d0f24;
+  --color-midnight-800: #141832;
+  --color-midnight-700: #1e2348;
+  --color-midnight-600: #2a3060;
+  --color-midnight-500: #3d4580;
+  --color-midnight-400: #5b63a0;
+  --color-midnight-300: #8088c0;
+  --color-midnight-200: #b0b6d8;
+  --color-midnight-100: #d8dcf0;
+
+  /* Accent — ZK proof / privacy green */
+  --color-zk-500: #10b981;
+  --color-zk-400: #34d399;
+  --color-zk-300: #6ee7b7;
+  --color-zk-600: #059669;
+
+  /* Warning / private data orange */
+  --color-private-500: #f59e0b;
+  --color-private-400: #fbbf24;
+  --color-private-300: #fcd34d;
+  --color-private-600: #d97706;
+
+  /* Public data / disclosed blue */
+  --color-public-500: #6366f1;
+  --color-public-400: #818cf8;
+  --color-public-300: #a5b4fc;
+  --color-public-600: #4f46e5;
+
+  /* Error / danger red */
+  --color-danger-500: #ef4444;
+  --color-danger-400: #f87171;
+
+  /* Surface / glass */
+  --color-surface-primary: rgba(20, 24, 50, 0.85);
+  --color-surface-elevated: rgba(30, 35, 72, 0.75);
+  --color-surface-glass: rgba(255, 255, 255, 0.04);
+
+  /* Border */
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-medium: rgba(255, 255, 255, 0.12);
+  --color-border-accent: rgba(99, 102, 241, 0.3);
+
+  /* Font family */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+}
+
+/* ============================================================
+   Base styles
+   ============================================================ */
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: linear-gradient(160deg, var(--color-midnight-950) 0%, #080820 50%, #0c0a20 100%);
+  color: var(--color-midnight-100);
+  min-height: 100dvh;
+}
+
+/* Subtle ambient background animation */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 20%, rgba(99, 102, 241, 0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================================================
+   Glass card utility
+   ============================================================ */
+
+.glass-card {
+  background: var(--color-surface-primary);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 1rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.glass-card-elevated {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border-medium);
+  border-radius: 1rem;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+
+/* ============================================================
+   Privacy indicator badges
+   ============================================================ */
+
+.badge-private {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--color-private-400);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.badge-public {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  background: rgba(99, 102, 241, 0.12);
+  color: var(--color-public-400);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.badge-zk {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-zk-400);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+/* ============================================================
+   Pulse animation for proof generation
+   ============================================================ */
+
+@keyframes proof-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+.animate-proof-pulse {
+  animation: proof-pulse 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.04) 50%,
+    rgba(255,255,255,0) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
