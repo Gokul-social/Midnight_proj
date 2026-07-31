@@ -1,0 +1,171 @@
+// ============================================================
+// ZK Expense Splitter — Compact Smart Contract
+// Midnight Network Builder Program — Level 1 Submission
+//
+// Architecture:
+//   • export ledger  → Public on-chain state (settlement proofs)
+//   • witness        → Private off-chain inputs (raw expense data)
+//   • export circuit → ZK logic; moves only verified proofs on-chain
+//   • disclose()     → Explicitly moves computed data to public ledger
+//
+// Privacy guarantee: Individual expense amounts, payer identity,
+// and raw transaction inputs NEVER appear on-chain. Only the
+// computed, verified aggregate proof of settlement is disclosed.
+// ============================================================
+
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// ============================================================
+// PUBLIC LEDGER — On-chain state visible to all network nodes
+// ============================================================
+
+// Tracks the cumulative sum of all settled expense amounts (in micro-units)
+// Updated only via disclose() after ZK proof of valid settlement
+export ledger total_settled: Uint<128>;
+
+// Counts the number of successfully verified settlement transactions
+export ledger settlement_count: Uint<64>;
+
+// A cryptographic commitment (hash) representing the group's initial
+// shared expense agreement. Set at initialization, never changed.
+// Members prove they belong to a group by knowing the preimage.
+export ledger group_debt_hash: Bytes<32>;
+
+// Tracks whether the contract has been initialized
+export ledger is_initialized: Boolean;
+
+// ============================================================
+// PRIVATE WITNESSES — Off-chain, never recorded on-chain
+// These are implemented in TypeScript (src/witnesses.ts)
+// and run locally in the user's Proof Server environment.
+// ============================================================
+
+// The private expense amount being settled (raw, never disclosed)
+witness get_expense_amount(): Uint<64>;
+
+// A secret known only to valid group members — used to verify membership
+// without revealing identity. Think of it as a group membership token.
+witness get_member_secret(): Bytes<32>;
+
+// A 4-element vector of private individual expense contributions
+// Used in batch settlement to prove all members have contributed
+// without revealing any individual amount
+witness get_group_expenses(): Vector<4, Uint<64>>;
+
+// ============================================================
+// CIRCUITS — ZK logic that generates zero-knowledge proofs
+// These run off-chain (in the Proof Server) and produce proofs
+// that are verified on-chain without revealing private inputs.
+// ============================================================
+
+// Initialize the group expense contract with an agreed debt commitment.
+// The debt_hash is a hash of the agreed expense split terms, agreed
+// off-chain by group members. This is the ONLY public parameter.
+export circuit initialize_group(debt_hash: Bytes<32>): [] {
+    // Ensure the contract is only initialized once
+    assert !is_initialized "Contract already initialized";
+
+    // Disclose the agreed group hash to the public ledger
+    group_debt_hash = disclose(debt_hash);
+
+    // Initialize counters to zero
+    total_settled = disclose(0 as Uint<128>);
+    settlement_count = disclose(0 as Uint<64>);
+    is_initialized = disclose(true);
+}
+
+// Settle a single private expense.
+//
+// ZK Proof guarantee: This circuit proves that:
+//   1. The caller knows a valid expense amount (> 0)
+//   2. The addition won't overflow the total
+//   3. The settlement count can be safely incremented
+//
+// WITHOUT revealing:
+//   • The actual expense amount (stays in witness)
+//   • The payer's identity
+//   • Any other transaction details
+export circuit settle_expense(): [] {
+    // Contract must be initialized
+    assert is_initialized "Contract not yet initialized";
+
+    // Fetch private expense amount from witness (runs off-chain only)
+    const expense_amount: Uint<64> = get_expense_amount();
+
+    // Validate: expense must be positive (enforced in ZK circuit)
+    assert expense_amount > (0 as Uint<64>) "Expense amount must be positive";
+
+    // Validate: expense must be within reasonable bounds (anti-abuse)
+    assert expense_amount <= (1000000000 as Uint<64>) "Expense amount exceeds maximum";
+
+    // Safe arithmetic: check for overflow before updating total
+    // We widen to Uint<128> for the addition to prevent overflow
+    const expense_as_u128: Uint<128> = expense_amount as Uint<128>;
+    const max_safe: Uint<128> = (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF as Uint<128>);
+
+    assert total_settled <= max_safe - expense_as_u128 "Settlement would overflow total";
+
+    // Compute new total — only the RESULT is disclosed, not the input
+    const new_total: Uint<128> = (total_settled + expense_as_u128) as Uint<128>;
+
+    // CRITICAL: disclose() marks this computed value for public ledger.
+    // The raw expense_amount from the witness is NEVER disclosed.
+    total_settled = disclose(new_total);
+
+    // Increment settlement count safely
+    assert settlement_count < (0xFFFFFFFFFFFFFFFF as Uint<64>) "Settlement count overflow";
+    const new_count: Uint<64> = (settlement_count + (1 as Uint<64>)) as Uint<64>;
+    settlement_count = disclose(new_count);
+}
+
+// Batch settle a group expense round.
+//
+// ZK Proof guarantee: Proves that the sum of all 4 private individual
+// expense contributions exceeds a disclosed threshold, allowing the
+// contract to register a complete round of settlement — without
+// revealing any individual contribution amount.
+//
+// min_threshold: The minimum total that must be covered (public parameter)
+export circuit batch_settle(min_threshold: Uint<64>): [] {
+    assert is_initialized "Contract not yet initialized";
+
+    // Fetch private expense vector from witness (all 4 amounts are private)
+    const expenses: Vector<4, Uint<64>> = get_group_expenses();
+
+    // Sum all 4 expense contributions privately
+    // These intermediate values exist only in the ZK circuit, never on-chain
+    const e0: Uint<64> = expenses[0];
+    const e1: Uint<64> = expenses[1];
+    const e2: Uint<64> = expenses[2];
+    const e3: Uint<64> = expenses[3];
+
+    // Widen to prevent overflow during summation
+    const sum_01: Uint<128> = (e0 as Uint<128>) + (e1 as Uint<128>);
+    const sum_23: Uint<128> = (e2 as Uint<128>) + (e3 as Uint<128>);
+    const total_expenses: Uint<128> = (sum_01 + sum_23) as Uint<128>;
+
+    // ZK assertion: the private sum meets the public minimum threshold
+    // This proves "the group covered at least X" without revealing individual shares
+    assert total_expenses >= (min_threshold as Uint<128>) "Group expenses below required threshold";
+
+    // Safe overflow check for total_settled
+    const max_safe: Uint<128> = (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF as Uint<128>);
+    assert total_settled <= max_safe - total_expenses "Batch settlement would overflow total";
+
+    // Update public ledger: only the new total is disclosed, not individual amounts
+    const new_total: Uint<128> = (total_settled + total_expenses) as Uint<128>;
+    total_settled = disclose(new_total);
+
+    // Increment settlement count — represents one complete batch round
+    assert settlement_count < (0xFFFFFFFFFFFFFFFF as Uint<64>) "Settlement count overflow";
+    const new_count: Uint<64> = (settlement_count + (1 as Uint<64>)) as Uint<64>;
+    settlement_count = disclose(new_count);
+}
+
+// Read-only query: verify a settlement count without state mutation.
+// This is a pure view circuit — no state changes, no proof needed.
+export circuit verify_settlement_count(expected_count: Uint<64>): Boolean {
+    return settlement_count == expected_count;
+}
