@@ -2,6 +2,7 @@ import { Header } from './components/Header';
 import { ExpenseDashboard } from './components/ExpenseDashboard';
 import { SettleExpenseForm } from './components/SettleExpenseForm';
 import { PrivacyLog } from './components/PrivacyLog';
+import { PrivacyClaim } from './components/PrivacyClaim';
 import { useApp } from './context/AppContext';
 
 function AppContent() {
@@ -52,6 +53,7 @@ function AppContent() {
           {/* Left: Dashboard (wider) */}
           <div className="lg:col-span-3 space-y-6">
             <ExpenseDashboard />
+            <PrivacyClaim />
             <PrivacyLog />
           </div>
 
