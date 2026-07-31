@@ -8,11 +8,13 @@
   },
   "scripts": {
     "compile": "compactc contract/src/zk_expense_splitter.compact managed",
+    "build:contract": "compactc contract/src/zk_expense_splitter.compact managed",
     "test": "jest --testPathPattern=tests/ --forceExit",
     "test:watch": "jest --testPathPattern=tests/ --watch",
     "deploy": "ts-node src/deploy.ts",
     "build": "tsc --project tsconfig.json",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "ci": "npm run lint && npm test"
   },
   "keywords": [
     "midnight",
