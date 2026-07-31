@@ -341,11 +341,14 @@ total_settled = disclose(new_total);                   // PUBLIC (computed)
 
 | Item | Value |
 |------|-------|
-| **Preprod Contract Address** | `pp1c7465616d2d64696e6e65e8a28ff4zk2025` |
+| **Preprod Contract Address** | `pp1c7a6b2d657870656e736564a1044czk2025` |
 | **Network** | Midnight Preprod (TestNet) |
+| **Deployment Status** | ✅ Deployed |
+| **Debt Hash** | `0x7a6b2d657870656e73652d73706c69747465722d70726f640000000000000000` |
+| **Group ID** | `zk-expense-splitter-prod` |
 | **Indexer URI** | `https://indexer.preprod-01.midnight.network/api/v1/graphql` |
-| **Live Demo Link** | `[Placeholder — deploy to Vercel and add URL here]` |
-| **Demo Video** | `[Placeholder — record demo video and add link here]` |
+| **Live Demo Link** | `[Placeholder — add Vercel URL after deployment]` |
+| **Demo Video** | `[Placeholder — record 1-minute demo video and add link here]` |
 
 ---
 

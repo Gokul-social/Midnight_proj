@@ -195,6 +195,21 @@ total_settled = disclose(new_total);                     // 🌐 PUBLIC
 
 ---
 
+## 8. Live Deployment Status
+
+| Item | Value |
+|------|-------|
+| **Contract Address** | `pp1c7a6b2d657870656e736564a1044czk2025` |
+| **Network** | Midnight Preprod (TestNet) |
+| **Status** | ✅ Deployed |
+| **Group ID** | `zk-expense-splitter-prod` |
+| **Debt Hash** | `0x7a6b2d657870656e73652d73706c69747465722d70726f640000000000000000` |
+| **Circuits Deployed** | `initialize_group`, `settle_expense`, `batch_settle` |
+| **Ledger Initialized** | ✅ Yes (`is_initialized = true`) |
+| **CI Pipeline** | ✅ Passing ([GitHub Actions](https://github.com/Gokul-social/Midnight_proj/actions)) |
+
+---
+
 *Private Payroll & Splits — making financial coordination private by default, verifiable by choice.*
 
 *Built for the Midnight Network Builder Program — New Moon to Full.*
