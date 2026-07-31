@@ -1,27 +1,18 @@
 import { useApp } from '../context/AppContext';
 import type { PrivacyLogEntry } from '../types';
 
-const TYPE_STYLES: Record<PrivacyLogEntry['type'], { badge: string; dotColor: string; borderAccent: string }> = {
-  private_input: {
-    badge: 'badge-private',
-    dotColor: 'bg-private-400',
-    borderAccent: 'border-l-private-500/40',
-  },
-  zk_proof: {
-    badge: 'badge-zk',
-    dotColor: 'bg-zk-400',
-    borderAccent: 'border-l-zk-500/40',
-  },
-  public_update: {
-    badge: 'badge-public',
-    dotColor: 'bg-public-400',
-    borderAccent: 'border-l-public-500/40',
-  },
-  tx_submitted: {
-    badge: 'badge-public',
-    dotColor: 'bg-public-300',
-    borderAccent: 'border-l-public-400/40',
-  },
+const DOT_COLOR: Record<PrivacyLogEntry['type'], string> = {
+  private_input: '#fbbf24',
+  zk_proof: '#34d399',
+  public_update: '#4040ff',
+  tx_submitted: '#6060ff',
+};
+
+const LEFT_BORDER: Record<PrivacyLogEntry['type'], string> = {
+  private_input: '#fbbf24',
+  zk_proof: '#34d399',
+  public_update: '#0000FF',
+  tx_submitted: '#4040ff',
 };
 
 const TYPE_LABELS: Record<PrivacyLogEntry['type'], string> = {
@@ -31,12 +22,16 @@ const TYPE_LABELS: Record<PrivacyLogEntry['type'], string> = {
   tx_submitted: 'TX',
 };
 
-function formatTime(timestamp: number): string {
-  return new Date(timestamp).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
+const BADGE_STYLE: Record<PrivacyLogEntry['type'], string> = {
+  private_input: 'badge-private',
+  zk_proof: 'badge-zk',
+  public_update: 'badge-public',
+  tx_submitted: 'badge-public',
+};
+
+function formatTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString('en-US', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
   });
 }
 
@@ -47,81 +42,79 @@ export function PrivacyLog() {
   if (privacyLog.length === 0) return null;
 
   return (
-    <div className="glass-card-elevated p-6 space-y-4">
+    <div className="border border-white/10 bg-[#111111] hover:border-[#0000FF]/30 transition-colors duration-300">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-zk-500/15 flex items-center justify-center">
-            <svg className="w-4 h-4 text-zk-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.08]">
+        <div className="flex items-center gap-4">
+          <div className="w-7 h-7 bg-[#34d399]/10 border border-[#34d399]/20 flex items-center justify-center">
+            <svg className="w-3.5 h-3.5 text-[#34d399]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">Privacy Audit Log</h2>
-            <p className="text-xs text-midnight-400">Real-time view of what stays private vs. what goes on-chain</p>
+            <h2 className="font-bold text-white uppercase tracking-wide text-sm">Privacy Audit Log</h2>
+            <p className="font-mono text-[10px] text-white/30 uppercase tracking-widest">Real-time view of private vs. on-chain data</p>
           </div>
         </div>
         <button
           onClick={clearPrivacyLog}
-          className="text-xs text-midnight-500 hover:text-midnight-300 transition-colors cursor-pointer"
+          className="font-mono text-[10px] text-white/25 uppercase tracking-widest hover:text-white/60 transition-colors cursor-pointer border border-white/10 hover:border-white/30 px-3 py-1"
         >
           Clear
         </button>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap items-center gap-3 px-1">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-private-400" />
-          <span className="text-[10px] text-midnight-400">Private (local only)</span>
+      <div className="p-6 space-y-4">
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4">
+          {[
+            { color: '#fbbf24', label: 'Private (local only)' },
+            { color: '#34d399', label: 'ZK Proof (local computation)' },
+            { color: '#4040ff', label: 'Public (on-chain / network)' },
+          ].map(l => (
+            <div key={l.label} className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5" style={{ background: l.color }} />
+              <span className="font-mono text-[10px] text-white/30 uppercase tracking-widest">{l.label}</span>
+            </div>
+          ))}
         </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-zk-400" />
-          <span className="text-[10px] text-midnight-400">ZK Proof (local computation)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-public-400" />
-          <span className="text-[10px] text-midnight-400">Public (on-chain / network)</span>
-        </div>
-      </div>
 
-      {/* Log entries */}
-      <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-        {privacyLog.map((entry) => {
-          const style = TYPE_STYLES[entry.type];
-          return (
+        {/* Log entries */}
+        <div className="space-y-2 max-h-[360px] overflow-y-auto">
+          {privacyLog.map((entry) => (
             <div
               key={entry.id}
-              className={`rounded-lg bg-white/[0.02] border border-white/[0.04] border-l-2 ${style.borderAccent} p-3 flex items-start gap-3 transition-all duration-300`}
+              className="bg-black border border-white/[0.06] flex items-start gap-3 p-3 transition-all"
+              style={{ borderLeftWidth: '2px', borderLeftColor: LEFT_BORDER[entry.type] }}
             >
-              {/* Dot */}
-              <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${style.dotColor}`} />
+              <div
+                className="w-1.5 h-1.5 mt-1.5 shrink-0 rounded-full"
+                style={{ background: DOT_COLOR[entry.type] }}
+              />
 
-              {/* Content */}
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-semibold text-white">{entry.label}</span>
-                  <span className={`${style.badge} text-[10px] py-0 px-1.5`}>
+                  <span className="font-bold text-white text-xs uppercase tracking-wide">{entry.label}</span>
+                  <span className={`${BADGE_STYLE[entry.type]} text-[9px] py-0 px-1.5`}>
                     {TYPE_LABELS[entry.type]}
                   </span>
                   {entry.isPrivate && (
-                    <span className="text-[10px] text-private-500 flex items-center gap-1">
+                    <span className="font-mono text-[9px] text-[#fbbf24]/50 uppercase tracking-widest">
                       🔒 never broadcast
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-midnight-400 leading-relaxed break-all">
+                <p className="font-mono text-[11px] text-white/35 leading-relaxed break-all">
                   {entry.detail}
                 </p>
               </div>
 
-              {/* Timestamp */}
-              <span className="text-[10px] text-midnight-600 font-mono shrink-0 tabular-nums">
+              <span className="font-mono text-[10px] text-white/20 shrink-0 tabular-nums">
                 {formatTime(entry.timestamp)}
               </span>
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
     </div>
   );
