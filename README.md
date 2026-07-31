@@ -238,6 +238,8 @@ total_settled = disclose(new_total);                        // PUBLIC (computed)
 
 The ZK Expense Splitter envisions a trustless, privacy-preserving peer-to-peer expense sharing dApp that fundamentally reimagines how groups manage shared costs. Imagine a team dinner, a shared vacation, or recurring household bills: today, every participant must either trust a centralized intermediary (Splitwise, Venmo) with their complete financial transaction history, or use a traditional blockchain where every payment is permanently and publicly visible to the world. The ZK Expense Splitter eliminates both failure modes by leveraging the Midnight Network's zero-knowledge proof architecture — each group member generates a cryptographic proof on their own device that they have settled their portion of a shared expense, and this proof is published on-chain to update a collective settlement ledger, all without revealing the exact dollar amount, the payee, or any other transaction detail. The on-chain state only ever records the aggregate progress of the group: "this group has collectively settled X micro-units across N transactions" — enough for any member to verify that everyone has paid their share, yet insufficient for any observer, data broker, or even the protocol itself to reconstruct individual spending patterns. This creates a new primitive for privacy-native financial coordination: verifiable honesty without surveillance, collective accountability without individual exposure.
 
+> 📄 **Full product proposal:** See [PROPOSAL.md](PROPOSAL.md) for the formalized Private Payroll / Splits product vision, competitive analysis, roadmap, and success metrics.
+
 ---
 
 ## 🔐 Privacy Claim — Level 2
