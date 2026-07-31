@@ -1,59 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
-/* ============================================================
-   ZK Expense Splitter — Design System
-   Midnight-inspired dark theme with privacy-centric UI palette
-   ============================================================ */
 
 @theme {
-  /* Core brand colors — Midnight purple gradient family */
-  --color-midnight-950: #0a0a1a;
-  --color-midnight-900: #0d0f24;
-  --color-midnight-800: #141832;
-  --color-midnight-700: #1e2348;
-  --color-midnight-600: #2a3060;
-  --color-midnight-500: #3d4580;
-  --color-midnight-400: #5b63a0;
-  --color-midnight-300: #8088c0;
-  --color-midnight-200: #b0b6d8;
-  --color-midnight-100: #d8dcf0;
+  /* Core brand — Electric Blue × Black */
+  --color-electric-blue: #0000FF;
+  --color-electric-blue-dim: #0000cc;
+  --color-electric-blue-glow: rgba(0, 0, 255, 0.15);
 
-  /* Accent — ZK proof / privacy green */
+  /* Grayscale palette */
+  --color-pitch-black: #000000;
+  --color-surface-dark: #0e0e0e;
+  --color-surface-mid: #1b1b1b;
+  --color-surface-high: #252525;
+  --color-surface-highest: #333333;
+  --color-stroke-faint: rgba(255, 255, 255, 0.08);
+  --color-stroke-medium: rgba(255, 255, 255, 0.15);
+  --color-stroke-bright: rgba(255, 255, 255, 0.25);
+  --color-outline: #8f8fa4;
+
+  /* Semantic — keeps old color names working */
+  --color-midnight-950: #0a0a0a;
+  --color-midnight-900: #111111;
+  --color-midnight-800: #1a1a1a;
+  --color-midnight-700: #222222;
+  --color-midnight-600: #333333;
+  --color-midnight-500: #555555;
+  --color-midnight-400: #888888;
+  --color-midnight-300: #aaaaaa;
+  --color-midnight-200: #cccccc;
+  --color-midnight-100: #eeeeee;
+
+  /* Accent colors — private/public/zk */
   --color-zk-500: #10b981;
   --color-zk-400: #34d399;
   --color-zk-300: #6ee7b7;
   --color-zk-600: #059669;
 
-  /* Warning / private data orange */
   --color-private-500: #f59e0b;
   --color-private-400: #fbbf24;
   --color-private-300: #fcd34d;
   --color-private-600: #d97706;
 
-  /* Public data / disclosed blue */
-  --color-public-500: #6366f1;
-  --color-public-400: #818cf8;
-  --color-public-300: #a5b4fc;
-  --color-public-600: #4f46e5;
+  --color-public-500: #0000FF;
+  --color-public-400: #4040ff;
+  --color-public-300: #8080ff;
+  --color-public-600: #0000cc;
 
-  /* Error / danger red */
   --color-danger-500: #ef4444;
   --color-danger-400: #f87171;
 
-  /* Surface / glass */
-  --color-surface-primary: rgba(20, 24, 50, 0.85);
-  --color-surface-elevated: rgba(30, 35, 72, 0.75);
-  --color-surface-glass: rgba(255, 255, 255, 0.04);
-
-  /* Border */
-  --color-border-subtle: rgba(255, 255, 255, 0.06);
-  --color-border-medium: rgba(255, 255, 255, 0.12);
-  --color-border-accent: rgba(99, 102, 241, 0.3);
-
-  /* Font family */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  /* Fonts */
+  --font-sans: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 }
+
+/* ============================================================
+   Google Fonts import
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* ============================================================
    Base styles
@@ -64,49 +70,59 @@ html {
 }
 
 body {
-  background: linear-gradient(160deg, var(--color-midnight-950) 0%, #080820 50%, #0c0a20 100%);
-  color: var(--color-midnight-100);
+  background-color: #000000;
+  color: #ffffff;
   min-height: 100dvh;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  overflow-x: hidden;
 }
 
-/* Subtle ambient background animation */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 80% 60% at 20% 20%, rgba(99, 102, 241, 0.06) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 80% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-#root {
-  position: relative;
-  z-index: 1;
+* {
+  box-sizing: border-box;
 }
 
 /* ============================================================
-   Glass card utility
+   Scrollbar
+   ============================================================ */
+
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+/* ============================================================
+   Marquee animation
+   ============================================================ */
+
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 20s linear infinite;
+}
+
+/* ============================================================
+   Glass card utility — now black with blue glow
    ============================================================ */
 
 .glass-card {
-  background: var(--color-surface-primary);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 1rem;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: #0e0e0e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0;
 }
 
 .glass-card-elevated {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border-medium);
-  border-radius: 1rem;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  background: #111111;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
+  box-shadow: 0 0 0 1px rgba(0, 0, 255, 0.06) inset;
+}
+
+.glass-card-elevated:hover {
+  border-color: rgba(0, 0, 255, 0.25);
+  transition: border-color 0.3s ease;
 }
 
 /* ============================================================
@@ -118,13 +134,15 @@ body::before {
   align-items: center;
   gap: 0.375rem;
   padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: 0;
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.025em;
-  background: rgba(245, 158, 11, 0.12);
-  color: var(--color-private-400);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(245, 158, 11, 0.08);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 .badge-public {
@@ -132,13 +150,15 @@ body::before {
   align-items: center;
   gap: 0.375rem;
   padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: 0;
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.025em;
-  background: rgba(99, 102, 241, 0.12);
-  color: var(--color-public-400);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(0, 0, 255, 0.1);
+  color: #6060ff;
+  border: 1px solid rgba(0, 0, 255, 0.3);
 }
 
 .badge-zk {
@@ -146,56 +166,197 @@ body::before {
   align-items: center;
   gap: 0.375rem;
   padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
+  border-radius: 0;
   font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.025em;
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--color-zk-400);
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(16, 185, 129, 0.08);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
 }
 
 /* ============================================================
-   Pulse animation for proof generation
+   Button — Hyper Electric Blue style
+   ============================================================ */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: #0000FF;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 2px solid #0000FF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 0;
+}
+
+.btn-primary:hover {
+  background: transparent;
+  color: #0000FF;
+}
+
+.btn-primary:disabled {
+  background: #111111;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #555555;
+  cursor: not-allowed;
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 2rem;
+  background: transparent;
+  color: #ffffff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 0;
+}
+
+.btn-outline:hover {
+  border-color: #ffffff;
+  background: #ffffff;
+  color: #000000;
+}
+
+/* ============================================================
+   Input — dark mono style
+   ============================================================ */
+
+.input-dark {
+  width: 100%;
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  padding: 0.875rem 1rem;
+  border-radius: 0;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.input-dark:focus {
+  border-color: #0000FF;
+  box-shadow: 0 0 0 2px rgba(0, 0, 255, 0.12);
+}
+
+.input-dark::placeholder {
+  color: #444444;
+}
+
+/* ============================================================
+   Proof generation animation
    ============================================================ */
 
 @keyframes proof-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.05); }
+  50% { opacity: 0.5; transform: scale(1.04); }
 }
 
 .animate-proof-pulse {
-  animation: proof-pulse 2s ease-in-out infinite;
+  animation: proof-pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
+  0%   { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     rgba(255,255,255,0) 0%,
-    rgba(255,255,255,0.04) 50%,
-    rgba(255,255,255,0) 100%);
+    rgba(0, 0, 255, 0.06) 50%,
+    rgba(255,255,255,0) 100%
+  );
   background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
+  animation: shimmer 2.5s ease-in-out infinite;
 }
 
 /* ============================================================
-   Scrollbar
+   Feature circle (from landing)
    ============================================================ */
 
-::-webkit-scrollbar {
-  width: 6px;
+.feature-circle {
+  background: #0000FF;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: default;
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-::-webkit-scrollbar-track {
-  background: transparent;
+
+.feature-circle:hover {
+  transform: scale(1.12);
 }
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+
+/* ============================================================
+   Stat card — data boxes in the app
+   ============================================================ */
+
+.stat-card {
+  background: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 1rem;
+  transition: border-color 0.2s ease;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+
+.stat-card:hover {
+  border-color: rgba(0, 0, 255, 0.4);
+}
+
+/* ============================================================
+   Navigation — right rail style
+   ============================================================ */
+
+.nav-link {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 1.75rem;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  padding: 0.5rem 1rem;
+  color: #ffffff;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.nav-link:hover, .nav-link.active {
+  background: #ffffff;
+  color: #000000;
+}
+
+/* ============================================================
+   Landing hero text
+   ============================================================ */
+
+.hero-text {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+  font-size: clamp(56px, 10vw, 128px);
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  color: #ffffff;
 }
