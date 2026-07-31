@@ -20,7 +20,7 @@ This contract solves the privacy problem using **zero-knowledge proofs**:
 - A verifiable public ledger tracks aggregate settlement progress **without exposing individual contributions**
 - The group's expense agreement is committed on-chain as a hash — **the terms are verifiable without being readable**
 
-> **Midnight Builder Program — Level 1 Submission**
+> **Midnight Builder Program — Level 1 + Level 2 (Waxing Crescent) Submission**
 
 ---
 
@@ -240,6 +240,62 @@ The ZK Expense Splitter envisions a trustless, privacy-preserving peer-to-peer e
 
 ---
 
+## 🔐 Privacy Claim — Level 2
+
+This section documents the precise privacy boundary of the ZK Expense Splitter, as required for the Level 2 (Waxing Crescent) submission.
+
+### What the Frontend HIDES (Private Witness — Never Broadcast)
+
+| Data | Compact Declaration | Where It Lives | Transmitted? |
+|------|--------------------|-----------------|--------------|
+| **Expense Amount** | `witness get_expense_amount(): Uint<64>` | Browser memory → local proof server | ❌ NEVER |
+| **Member Secret** | `witness get_member_secret(): Bytes<32>` | Encrypted leveldb via private state provider | ❌ NEVER |
+| **Group Contributions** | `witness get_group_expenses(): Vector<4, Uint<64>>` | Browser memory → local proof server | ❌ NEVER |
+
+### What the Frontend PROVES to the Contract (Public — On-Chain)
+
+| Data | Compact Declaration | What the Proof Asserts |
+|------|--------------------|-----------------------|
+| **total_settled** | `export ledger total_settled: Uint<128>` | "The aggregate total increased by a valid positive amount ≤ 1B" |
+| **settlement_count** | `export ledger settlement_count: Uint<64>` | "The count incremented by exactly 1" |
+| **group_debt_hash** | `export ledger group_debt_hash: Bytes<32>` | "The group commitment hash matches the initialized value" |
+
+### The `disclose()` Boundary
+
+The Compact compiler enforces privacy at compile time. The `disclose()` function is the **only** way to move data from the private witness context to the public ledger:
+
+```compact
+// ❌ COMPILER ERROR: cannot assign private data to public ledger
+total_settled = total_settled + get_expense_amount();
+
+// ✅ CORRECT: only the COMPUTED aggregate is disclosed
+const expense: Uint<64> = get_expense_amount();      // PRIVATE
+const new_total = (total_settled + expense as Uint<128>) as Uint<128>;
+total_settled = disclose(new_total);                   // PUBLIC (computed)
+```
+
+### Frontend Privacy Enforcement
+
+- **No `console.log`** of private witness values
+- **No `localStorage`** storage of amounts or secrets
+- **No network requests** containing raw expense data
+- Private state exists only in JS memory during proof generation, then is garbage collected
+- The Privacy Audit Log UI shows users exactly what stays private vs. what goes on-chain
+
+---
+
+## 🌐 Live Demo & Deployed Contract
+
+| Item | Value |
+|------|-------|
+| **Preprod Contract Address** | `pp1c7465616d2d64696e6e65e8a28ff4zk2025` |
+| **Network** | Midnight Preprod (TestNet) |
+| **Indexer URI** | `https://indexer.preprod-01.midnight.network/api/v1/graphql` |
+| **Live Demo Link** | `[Placeholder — deploy to Vercel and add URL here]` |
+| **Demo Video** | `[Placeholder — record demo video and add link here]` |
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -248,25 +304,41 @@ zk-expense-splitter/
 │   └── src/
 │       └── zk_expense_splitter.compact   # Compact smart contract
 ├── managed/                               # Compiler-generated ZK circuits
-│   ├── README.md
 │   └── zk_expense_splitter/
-│       ├── contract/
-│       │   ├── index.cjs                  # Compiled contract module
-│       │   └── index.d.ts                 # TypeScript type declarations
-│       ├── keys/
-│       │   ├── *.pk.placeholder           # ZK proving key locations
-│       │   └── *.vk.placeholder           # ZK verification key locations
-│       └── witnesses/
-│           └── index.cjs                  # Witness interface module
+│       ├── contract/                      # Compiled contract module + types
+│       ├── keys/                          # ZK proving/verification keys
+│       └── witnesses/                     # Witness interface module
+├── frontend/                              # Level 2 — React + Vite frontend
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Header.tsx                 # Wallet status + branding
+│   │   │   ├── ExpenseDashboard.tsx        # Public ledger state display
+│   │   │   ├── SettleExpenseForm.tsx       # Private witness input form
+│   │   │   ├── PrivacyClaim.tsx            # Observable privacy claim UI
+│   │   │   └── PrivacyLog.tsx             # Real-time privacy audit log
+│   │   ├── context/
+│   │   │   └── AppContext.tsx             # Global state + circuit execution
+│   │   ├── hooks/
+│   │   │   └── useWalletDetection.ts      # Lace wallet detection hook
+│   │   ├── lib/
+│   │   │   ├── config.ts                  # Contract address + network config
+│   │   │   ├── wallet.ts                  # Midnight DApp connector module
+│   │   │   └── circuits.ts               # Circuit integration + witness mgmt
+│   │   ├── types/
+│   │   │   └── index.ts                   # Shared TypeScript types
+│   │   ├── App.tsx                        # Main app layout
+│   │   ├── main.tsx                       # Entry point
+│   │   └── index.css                      # Tailwind + design system
+│   ├── vercel.json                        # Deployment config
+│   └── package.json
 ├── src/
-│   ├── witnesses.ts                       # Private witness implementations
+│   ├── witnesses.ts                       # Backend witness implementations
 │   ├── deploy.ts                          # Deployment script (Preprod)
 │   └── utils.ts                           # Shared utilities
 ├── tests/
-│   └── expense_splitter.test.ts           # Comprehensive test suite (28 tests)
+│   └── expense_splitter.test.ts           # 34-test suite (all passing)
 ├── package.json
 ├── tsconfig.json
-├── .gitignore
 └── README.md
 ```
 
@@ -275,10 +347,16 @@ zk-expense-splitter/
 ## 🔑 Key Commands Reference
 
 ```bash
+# Backend (Level 1)
 npm run compile    # Compile Compact contract → ZK circuits
-npm test           # Run 28-test suite
+npm test           # Run 34-test suite
 npm run deploy     # Deploy to Midnight Preprod
-npm run build      # Compile TypeScript to JavaScript
+
+# Frontend (Level 2)
+cd frontend
+npm install        # Install frontend dependencies
+npm run dev        # Start local dev server (http://localhost:5173)
+npm run build      # Production build → frontend/dist/
 ```
 
 ---
@@ -325,4 +403,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-*Built with ❤️ for the Midnight Network Builder Program — New Moon to Full, Level 1 Submission.*
+*Built with ❤️ for the Midnight Network Builder Program — New Moon to Full, Level 1 + Level 2 (Waxing Crescent) Submission.*
