@@ -2,6 +2,7 @@
 
 > **A production-grade, privacy-preserving group expense splitting dApp built on the Midnight Network using Compact smart contracts and zero-knowledge proofs.**
 
+[![CI — Compile, Test & Build](https://github.com/Gokul-social/Midnight_proj/actions/workflows/ci.yml/badge.svg)](https://github.com/Gokul-social/Midnight_proj/actions/workflows/ci.yml)
 [![Midnight Network](https://img.shields.io/badge/Midnight-Network-6B21A8?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZmlsbD0id2hpdGUiIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=)](https://midnight.network)
 [![Language: Compact](https://img.shields.io/badge/Language-Compact-4F46E5?style=for-the-badge)](https://docs.midnight.network/develop/reference/compact/)
 [![ZK Proofs](https://img.shields.io/badge/ZK-Proofs-10B981?style=for-the-badge)](https://docs.midnight.network)
@@ -20,7 +21,7 @@ This contract solves the privacy problem using **zero-knowledge proofs**:
 - A verifiable public ledger tracks aggregate settlement progress **without exposing individual contributions**
 - The group's expense agreement is committed on-chain as a hash — **the terms are verifiable without being readable**
 
-> **Midnight Builder Program — Level 1 + Level 2 (Waxing Crescent) Submission**
+> **Midnight Builder Program — Level 1 + Level 2 + Level 3 (First Quarter) Submission**
 
 ---
 
@@ -238,6 +239,8 @@ total_settled = disclose(new_total);                        // PUBLIC (computed)
 
 The ZK Expense Splitter envisions a trustless, privacy-preserving peer-to-peer expense sharing dApp that fundamentally reimagines how groups manage shared costs. Imagine a team dinner, a shared vacation, or recurring household bills: today, every participant must either trust a centralized intermediary (Splitwise, Venmo) with their complete financial transaction history, or use a traditional blockchain where every payment is permanently and publicly visible to the world. The ZK Expense Splitter eliminates both failure modes by leveraging the Midnight Network's zero-knowledge proof architecture — each group member generates a cryptographic proof on their own device that they have settled their portion of a shared expense, and this proof is published on-chain to update a collective settlement ledger, all without revealing the exact dollar amount, the payee, or any other transaction detail. The on-chain state only ever records the aggregate progress of the group: "this group has collectively settled X micro-units across N transactions" — enough for any member to verify that everyone has paid their share, yet insufficient for any observer, data broker, or even the protocol itself to reconstruct individual spending patterns. This creates a new primitive for privacy-native financial coordination: verifiable honesty without surveillance, collective accountability without individual exposure.
 
+> 📄 **Full product proposal:** See [PROPOSAL.md](PROPOSAL.md) for the formalized Private Payroll / Splits product vision, competitive analysis, roadmap, and success metrics.
+
 ---
 
 ## 🔐 Privacy Claim — Level 2
@@ -281,6 +284,56 @@ total_settled = disclose(new_total);                   // PUBLIC (computed)
 - **No network requests** containing raw expense data
 - Private state exists only in JS memory during proof generation, then is garbage collected
 - The Privacy Audit Log UI shows users exactly what stays private vs. what goes on-chain
+
+---
+
+## 🛡️ Privacy Model — Level 3
+
+### Full Privacy Matrix
+
+| Data Attribute | Exposure Level | Storage Location | Cryptographic Mechanism | Compact Declaration |
+|:---|:---|:---|:---|:---|
+| `expense_amount` | 🔒 **Private Witness** | Local client memory (JS heap) | Never disclosed on-chain; consumed by ZK proof generator | `witness get_expense_amount(): Uint<64>` |
+| `member_secret` | 🔒 **Private Witness** | Local client memory (encrypted leveldb) | Kept off-chain for ZK proof creation; proves group membership | `witness get_member_secret(): Bytes<32>` |
+| `group_expenses` | 🔒 **Private Witness** | Local client memory (JS heap) | 4-element vector consumed locally; batch threshold proven without individual shares | `witness get_group_expenses(): Vector<4, Uint<64>>` |
+| `total_settled` | 🌐 **Public Ledger** | Midnight on-chain state | Updated via `disclose()` — only computed aggregate reaches the chain | `export ledger total_settled: Uint<128>` |
+| `settlement_count` | 🌐 **Public Ledger** | Midnight on-chain state | Incremented by 1 per settlement; reveals count but not amounts | `export ledger settlement_count: Uint<64>` |
+| `group_debt_hash` | 🌐 **Public Ledger** | Midnight on-chain state | Cryptographic commitment anchor — binds the group agreement without revealing terms | `export ledger group_debt_hash: Bytes<32>` |
+| `is_initialized` | 🌐 **Public Ledger** | Midnight on-chain state | Boolean lifecycle flag — reveals only whether the contract is active | `export ledger is_initialized: Boolean` |
+
+### What an Observer Can vs. Cannot Learn
+
+#### ✅ What an Observer CAN Learn (from the public ledger)
+
+| Observable | Example | Privacy Impact |
+|------------|---------|----------------|
+| A group exists | Contract deployed at `pp1c...zk2025` | Low — reveals only that an expense group was created |
+| Total aggregate settled | `total_settled = 4,800,000` | Low — reveals the cumulative sum but NOT individual contributions |
+| Number of settlements | `settlement_count = 13` | Low — reveals activity frequency but not who settled or how much |
+| Group terms committed | `group_debt_hash = 0x7465...` | None — the hash is opaque; terms cannot be reconstructed |
+| Contract is active | `is_initialized = true` | None — trivial lifecycle information |
+| Transaction timing | Block timestamps of settlement txs | Medium — reveals *when* settlements occur (but not by whom or how much) |
+
+#### ❌ What an Observer CANNOT Learn
+
+| Hidden Information | Why It's Hidden | Enforcement |
+|-------------------|-----------------|-------------|
+| **Individual expense amounts** | Never passed through `disclose()` — consumed only by the local ZK proof generator | Compact compiler rejects any attempt to assign witness values to `export ledger` |
+| **Who settled what** | The proof attests "a valid settlement occurred" without binding it to a specific address or identity | No identity data appears in the circuit's public outputs |
+| **Each member's share in batch settlement** | `batch_settle` proves the *sum* of 4 private values exceeds a threshold, without revealing any individual value | The `Vector<4, Uint<64>>` witness is consumed locally; only the boolean threshold check result is disclosed |
+| **Group membership identity** | `member_secret` proves authorization but is never disclosed; the on-chain contract has no address-to-member mapping | The witness is used purely for proof generation |
+| **Expense terms / categories** | The `group_debt_hash` is a one-way commitment; the original terms cannot be reconstructed from the hash | SHA-256 preimage resistance |
+| **Payment relationships** | The contract tracks aggregate settlement, not payer–payee links | No relationship graph is stored on-chain |
+
+### Privacy Threat Model
+
+| Threat | Mitigated? | How |
+|--------|-----------|-----|
+| Chain observer reads individual amounts | ✅ Yes | Amounts exist only as private witnesses; only aggregates are disclosed |
+| Malicious indexer reconstructs amounts | ✅ Yes | The indexer serves only public ledger state, which contains no individual data |
+| Front-running based on amount knowledge | ✅ Yes | The amount is unknown to any observer until the proof is already submitted |
+| Statistical inference from settlement patterns | ⚠️ Partial | An observer could correlate settlement timing with off-chain events; mitigated by batch settlements |
+| Proof server compromise | ✅ Yes | The proof server runs locally (Docker); witness data never leaves localhost |
 
 ---
 
@@ -403,4 +456,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-*Built with ❤️ for the Midnight Network Builder Program — New Moon to Full, Level 1 + Level 2 (Waxing Crescent) Submission.*
+*Built with ❤️ for the Midnight Network Builder Program — New Moon to Full, Level 1 + Level 2 + Level 3 (First Quarter) Submission.*
