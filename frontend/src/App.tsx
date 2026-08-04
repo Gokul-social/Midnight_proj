@@ -9,7 +9,7 @@ import { PrivacyClaim } from './components/PrivacyClaim';
 // Marquee bar
 // ────────────────────────────────────────────────────────────
 function MarqueeBar({ position }: { position: 'top' | 'bottom' }) {
-  const text = 'ZK EXPENSE SPLITTER — 34 TESTS PASSING — MIDNIGHT PREPROD DEPLOYED — PRIVACY BY DEFAULT — ';
+  const text = 'ZK EXPENSE SPLITTER — 34 TESTS PASSING — MIDNIGHT PREVIEW DEPLOYED — PRIVACY BY DEFAULT — ';
   const repeated = Array(6).fill(text).join('');
   return (
     <div
@@ -219,7 +219,7 @@ function LandingPage({ onLaunchApp }: { onLaunchApp: () => void }) {
             { label: 'Tests Passing', value: '34' },
             { label: 'ZK Circuits', value: '3' },
             { label: 'Private Witnesses', value: '3' },
-            { label: 'Network', value: 'PREPROD' },
+            { label: 'Network', value: 'PREVIEW' },
           ].map(s => (
             <div key={s.label} className="text-center">
               <div className="font-bold text-5xl md:text-6xl text-white">{s.value}</div>
@@ -278,7 +278,7 @@ function AppDashboard() {
             <div>
               <h2 className="font-bold text-3xl text-white uppercase tracking-tight mb-3">Connect Your Wallet</h2>
               <p className="font-mono text-sm text-white/40 leading-relaxed">
-                Connect your Lace wallet on the Midnight Preprod network to interact with the ZK Expense Splitter contract.
+                Connect your Lace wallet on the Midnight Preview network to interact with the ZK Expense Splitter contract.
               </p>
             </div>
             <div className="space-y-3">

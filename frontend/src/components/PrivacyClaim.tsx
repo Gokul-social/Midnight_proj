@@ -157,7 +157,7 @@ export function PrivacyClaim() {
                 <p className="font-mono text-[11px] text-white/40 mt-0.5">
                   {settlement.proofStage === 'preparing_witness' && 'Storing expense amount in local private state...'}
                   {settlement.proofStage === 'generating_proof' && 'Proof server computing ZK proof — your amount is NOT sent anywhere...'}
-                  {settlement.proofStage === 'submitting_tx' && 'Submitting ONLY the proof to Midnight Preprod...'}
+                  {settlement.proofStage === 'submitting_tx' && 'Submitting ONLY the proof to Midnight Preview...'}
                   {settlement.proofStage === 'confirming' && 'Waiting for network confirmation...'}
                 </p>
               </div>

@@ -168,15 +168,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           info: {
             address: simulatedAddress,
             network: CONTRACT_CONFIG.network.name,
-            balance: '1,250.00 tDUST',
+            balance: '5,000 tNIGHT (demo)',
           },
         });
-        addPrivacyLog(
-          'public_update',
-          'Wallet Connected (Simulated)',
-          `Demo mode — no Lace wallet detected. Address: ${simulatedAddress.slice(0, 16)}...`,
-          false,
-        );
+        addPrivacyLog('public_update', 'Wallet Connected (Simulated)', `Demo mode — install Midnight-enabled Lace from docs.midnight.network. Address: ${simulatedAddress.slice(0, 16)}...`, false);
       }
 
       // Fetch initial ledger state
@@ -195,7 +190,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [addPrivacyLog]);
 
   /**
-   * Refresh the public ledger state from the Preprod indexer.
+   * Refresh the public ledger state from the Preview indexer.
    */
   const refreshLedgerInternal = async () => {
     // In production: query the indexer GraphQL endpoint for contract state
@@ -217,7 +212,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshLedger = useCallback(async () => {
     await refreshLedgerInternal();
-    addPrivacyLog('public_update', 'Ledger Refreshed', 'Queried Preprod indexer for latest public state.', false);
+    addPrivacyLog('public_update', 'Ledger Refreshed', 'Queried Preview indexer for latest public state.', false);
   }, [addPrivacyLog]);
 
   /**
@@ -285,7 +280,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addPrivacyLog(
         'tx_submitted',
         'Transaction Submitted',
-        'Submitting ZK proof to Midnight Preprod. The proof and public state delta are sent — NOT your private amount.',
+        'Submitting ZK proof to Midnight Preview. The proof and public state delta are sent — NOT your private amount.',
         false,
       );
       await new Promise(r => setTimeout(r, 2000));

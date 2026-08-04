@@ -7,7 +7,7 @@
  * 1. Load the compiled contract and its circuits
  * 2. Configure the Midnight.js provider stack
  * 3. Execute the settle_expense circuit with private witness data
- * 4. Query the public ledger state from the Preprod indexer
+ * 4. Query the public ledger state from the Preview indexer
  *
  * Architecture:
  *   Frontend Input  →  Local Private State (witness)
@@ -166,7 +166,7 @@ export async function executeSettleExpenseCircuit(
 }
 
 /**
- * Query the public ledger state from the Preprod indexer.
+ * Query the public ledger state from the Preview indexer.
  *
  * Production:
  *   const publicData = await indexerPublicDataProvider.queryContractState(CONTRACT_CONFIG.address);
