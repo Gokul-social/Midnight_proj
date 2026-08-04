@@ -38,6 +38,8 @@ function Nav({ activeSection, setActiveSection }: {
 }) {
   const { state, connectWallet, disconnectWallet } = useApp();
   const isConnected = state.wallet.status === 'connected';
+  const isDemo = state.wallet.isDemo;
+  const laceDetected = state.laceDetected;
 
   return (
     <nav className="fixed right-0 top-0 h-full w-[240px] flex flex-col justify-center items-end pr-8 z-50">
@@ -71,18 +73,33 @@ function Nav({ activeSection, setActiveSection }: {
           DOCS
         </a>
 
-        {/* Wallet pill */}
+        {/* Wallet status */}
         <div className="mt-8 flex flex-col items-end gap-2">
+          {/* Lace detection indicator (only when not connected) */}
+          {!isConnected && laceDetected && (
+            <div className="flex items-center gap-1.5 border border-[#10b981]/30 bg-[#10b981]/5 px-2 py-1">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+              <span className="font-mono text-[9px] text-[#10b981] uppercase tracking-widest">Lace detected</span>
+            </div>
+          )}
+
           {isConnected && state.wallet.info && (
             <div className="flex flex-col items-end gap-1">
-              <div className="flex items-center gap-2 border border-white/10 px-3 py-1.5">
-                <div className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
+              <div className={`flex items-center gap-2 border px-3 py-1.5 ${
+                isDemo ? 'border-[#fbbf24]/30 bg-[#fbbf24]/5' : 'border-[#10b981]/30 bg-[#10b981]/5'
+              }`}>
+                <div className={`w-2 h-2 rounded-full animate-pulse ${
+                  isDemo ? 'bg-[#fbbf24]' : 'bg-[#10b981]'
+                }`} />
                 <span className="text-xs font-mono text-white/70">
                   {state.wallet.info.address.slice(0, 10)}...
                 </span>
               </div>
               {state.wallet.info.balance && (
                 <span className="text-[11px] font-mono text-white/40">{state.wallet.info.balance}</span>
+              )}
+              {isDemo && (
+                <span className="font-mono text-[9px] text-[#fbbf24]/60 uppercase tracking-widest">Demo mode</span>
               )}
               <button
                 onClick={disconnectWallet}
@@ -102,7 +119,7 @@ function Nav({ activeSection, setActiveSection }: {
               onClick={() => { setActiveSection('app'); connectWallet(); }}
               className="text-[11px] font-mono uppercase text-[#0000FF] hover:text-white tracking-widest transition-colors border border-[#0000FF]/40 hover:border-white px-3 py-1.5"
             >
-              CONNECT
+              {laceDetected ? 'CONNECT LACE' : 'CONNECT'}
             </button>
           )}
         </div>
