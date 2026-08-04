@@ -6,15 +6,15 @@ const STAGE_LABELS: Record<ProofStage, string> = {
   idle: '',
   preparing_witness: 'Preparing Private Witness...',
   generating_proof: 'Generating ZK Proof...',
-  submitting_tx: 'Submitting Transaction...',
+  submitting_tx: 'Submitting to Midnight Preview...',
   confirming: 'Awaiting Confirmation...',
   complete: 'Settlement Complete',
   error: 'Settlement Failed',
 };
 
 const STAGE_PROGRESS: Record<ProofStage, number> = {
-  idle: 0, preparing_witness: 20, generating_proof: 50,
-  submitting_tx: 75, confirming: 90, complete: 100, error: 0,
+  idle: 0, preparing_witness: 20, generating_proof: 55,
+  submitting_tx: 78, confirming: 92, complete: 100, error: 0,
 };
 
 const STAGE_COLOR: Record<ProofStage, string> = {
@@ -28,15 +28,17 @@ export function SettleExpenseForm() {
   const [amount, setAmount] = useState('');
 
   const isConnected = wallet.status === 'connected';
+  const isDemo = wallet.isDemo;
   const isProcessing = settlement.proofStage !== 'idle' && settlement.proofStage !== 'complete' && settlement.proofStage !== 'error';
+  const parsedAmount = parseInt(amount, 10);
+  const isAmountValid = !isNaN(parsedAmount) && parsedAmount > 0;
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed = parseInt(amount, 10);
-    if (isNaN(parsed) || parsed <= 0) return;
-    await settleExpense(BigInt(parsed));
+    if (!isAmountValid) return;
+    await settleExpense(BigInt(parsedAmount));
     setAmount('');
-  }, [amount, settleExpense]);
+  }, [amount, settleExpense, isAmountValid, parsedAmount]);
 
   return (
     <div className="border border-white/10 bg-[#111111] hover:border-[#0000FF]/30 transition-colors duration-300">
@@ -50,13 +52,20 @@ export function SettleExpenseForm() {
           </div>
           <div>
             <h2 className="font-bold text-white uppercase tracking-wide text-sm">Settle Expense</h2>
-            <p className="font-mono text-[10px] text-white/30 uppercase tracking-widest">Your amount stays private — proof goes on-chain</p>
+            <p className="font-mono text-[10px] text-white/30 uppercase tracking-widest">Your amount stays private — only the proof goes on-chain</p>
           </div>
         </div>
-        <span className="badge-private">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#fbbf24]" />
-          PRIVATE INPUT
-        </span>
+        <div className="flex items-center gap-2">
+          {isDemo && (
+            <span className="font-mono text-[9px] text-[#fbbf24]/60 border border-[#fbbf24]/20 px-2 py-1 uppercase tracking-widest">
+              DEMO
+            </span>
+          )}
+          <span className="badge-private">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#fbbf24]" />
+            PRIVATE INPUT
+          </span>
+        </div>
       </div>
 
       <div className="p-6 space-y-5">
@@ -73,8 +82,15 @@ export function SettleExpenseForm() {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="expense-amount" className="block font-mono text-[11px] text-white/40 uppercase tracking-widest mb-2">
-              Expense Amount <span className="text-white/20">(micro-units)</span>
+            <label htmlFor="expense-amount" className="flex items-center justify-between mb-2">
+              <span className="font-mono text-[11px] text-white/40 uppercase tracking-widest">
+                Expense Amount <span className="text-white/20">(micro-units)</span>
+              </span>
+              {isConnected && !isAmountValid && amount === '' && (
+                <span className="font-mono text-[10px] text-[#0000FF] uppercase tracking-widest animate-pulse">
+                  ← Enter an amount to continue
+                </span>
+              )}
             </label>
             <div className="relative">
               <input
@@ -86,29 +102,58 @@ export function SettleExpenseForm() {
                 disabled={!isConnected || isProcessing}
                 min="1"
                 max="1000000000"
+                autoFocus={isConnected}
                 className="input-dark pr-28 disabled:opacity-40 disabled:cursor-not-allowed [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2">
                 <span className="badge-private text-[9px] py-0.5 px-2">🔒 local only</span>
               </div>
             </div>
+
+            {/* Quick amounts */}
+            {isConnected && !isProcessing && (
+              <div className="flex gap-2 mt-2">
+                {[10000, 50000, 100000, 500000].map(v => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setAmount(String(v))}
+                    className="font-mono text-[10px] text-white/30 border border-white/10 px-2 py-1 hover:border-[#0000FF]/40 hover:text-white/60 transition-all cursor-pointer uppercase tracking-widest"
+                  >
+                    {v.toLocaleString()}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <button
-            type="submit"
-            disabled={!isConnected || isProcessing || !amount || parseInt(amount) <= 0}
-            className="btn-primary w-full"
-          >
-            {isProcessing ? (
-              <span className="flex items-center gap-2 justify-center">
-                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Processing...
-              </span>
-            ) : 'Generate ZK Proof & Settle'}
-          </button>
+          {!isConnected ? (
+            <div className="text-center py-3 border border-white/[0.06] bg-black">
+              <p className="font-mono text-[11px] text-white/25 uppercase tracking-widest">
+                Connect your Lace wallet first
+              </p>
+            </div>
+          ) : (
+            <button
+              type="submit"
+              disabled={isProcessing || !isAmountValid}
+              className="btn-primary w-full"
+            >
+              {isProcessing ? (
+                <span className="flex items-center gap-2 justify-center">
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Processing ZK Proof...
+                </span>
+              ) : !isAmountValid ? (
+                'Enter an amount above to generate proof'
+              ) : (
+                `Generate ZK Proof & Settle ${parsedAmount.toLocaleString()} micro-units`
+              )}
+            </button>
+          )}
         </form>
 
         {/* Proof stage indicator */}
@@ -157,14 +202,22 @@ export function SettleExpenseForm() {
 
             {/* Success result */}
             {settlement.proofStage === 'complete' && settlement.lastResult && (
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="font-mono text-[10px] text-white/40">
-                  Tx: <span className="text-[#34d399] truncate inline-block max-w-[200px] align-bottom">{settlement.lastResult.txHash}</span>
+                  Tx: <span className="text-[#34d399] truncate">{settlement.lastResult.txHash.slice(0, 24)}...</span>
                 </div>
                 <div className="font-mono text-[10px] text-white/40 flex gap-4">
                   <span>Total: <span className="text-white/70">{settlement.lastResult.newTotalSettled.toLocaleString()}</span></span>
                   <span>Count: <span className="text-white/70">{settlement.lastResult.newSettlementCount.toString()}</span></span>
                 </div>
+                <div className="font-mono text-[10px] text-[#10b981]/60 uppercase tracking-widest">
+                  ✓ Amount kept private — only proof submitted on-chain
+                </div>
+                {isDemo && (
+                  <div className="font-mono text-[10px] text-white/20 uppercase tracking-widest">
+                    [Demo] Real Lace + Docker proof server required for on-chain settlement
+                  </div>
+                )}
               </div>
             )}
 
@@ -172,12 +225,6 @@ export function SettleExpenseForm() {
               <p className="font-mono text-[11px] text-[#f87171]">{settlement.error}</p>
             )}
           </div>
-        )}
-
-        {!isConnected && (
-          <p className="text-center font-mono text-[11px] text-white/25 uppercase tracking-widest">
-            Connect your Lace wallet to settle expenses
-          </p>
         )}
       </div>
     </div>
