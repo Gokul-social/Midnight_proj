@@ -159,7 +159,7 @@ async function deploy(): Promise<void> {
   console.log('');
 
   // Step 4: Deploy contract (simulation for this submission)
-  console.log('🚀 Deploying Contract to Midnight Preprod');
+  console.log('🚀 Deploying Contract to Midnight Preview');
   console.log('─'.repeat(60));
   console.log('  Circuit:         zk_expense_splitter.compact');
   console.log('  Compiler output: managed/zk_expense_splitter/');
@@ -170,7 +170,7 @@ async function deploy(): Promise<void> {
   // Simulate proof generation delay
   await simulateProofGeneration(1500);
 
-  console.log('  ⏳ Submitting deployment transaction to Preprod...');
+  console.log('  ⏳ Submitting deployment transaction to Preview...');
   await simulateNetworkSubmission(1000);
 
   // Simulate a deterministic contract address derived from group + deployment params
@@ -271,7 +271,7 @@ function deriveSimulatedContractAddress(
   debtHash: Uint8Array
 ): string {
   // Deterministic "address" for demo — real addresses come from the network
-  const prefix = network === 'mainnet' ? 'mn1' : network === 'preprod' ? 'pp1' : 'lo1';
+  const prefix = network === 'mainnet' ? 'mn1' : network === 'preview' ? 'lo1' : network === 'preprod' ? 'pp1' : 'lo1';
   const hashHex = bytesToHex(debtHash);
   const groupHash = groupId
     .split('')

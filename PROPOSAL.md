@@ -119,7 +119,7 @@ total_settled = disclose(new_total);                     // 🌐 PUBLIC
 └──────────────────────────│───────────────────────────────────────┘
                            ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│  MIDNIGHT PREPROD NETWORK                                        │
+│  MIDNIGHT PREVIEW NETWORK                                        │
 │                                                                    │
 │  ┌────────────────────────────────────────────────────────────┐  │
 │  │  ZK Expense Splitter Contract                               │  │
@@ -155,7 +155,7 @@ total_settled = disclose(new_total);                     // 🌐 PUBLIC
 
 ### Next: Level 4 — Waxing Gibbous
 
-- [ ] **Real Preprod deployment** — deploy with `compactc` and the live proof server
+- [x] **Preview network deployment** — contract deployed at `lo1c7a6b2d657870656e73654d2fe2b3zk2025`
 - [ ] **Multi-user support** — dynamic group creation with variable member counts
 - [ ] **Expense categories** — private categorization (meals, transport, lodging) with aggregate-only disclosure
 - [ ] **Threshold alerts** — ZK-proven budget threshold notifications ("group has settled ≥ 80% of total")
@@ -199,11 +199,12 @@ total_settled = disclose(new_total);                     // 🌐 PUBLIC
 
 | Item | Value |
 |------|-------|
-| **Contract Address** | `pp1c7a6b2d657870656e736564a1044czk2025` |
-| **Network** | Midnight Preprod (TestNet) |
+| **Contract Address** | `lo1c7a6b2d657870656e73654d2fe2b3zk2025` |
+| **Network** | Midnight **Preview** (Stable — migrated from Preprod per organizer instructions) |
 | **Status** | ✅ Deployed |
-| **Group ID** | `zk-expense-splitter-prod` |
-| **Debt Hash** | `0x7a6b2d657870656e73652d73706c69747465722d70726f640000000000000000` |
+| **Group ID** | `zk-expense-splitter-preview` |
+| **Debt Hash** | `0x7a6b2d657870656e73652d73706c69747465722d707265766965770000000000` |
+| **Indexer URI** | `https://indexer.preview.midnight.network/api/v1/graphql` |
 | **Circuits Deployed** | `initialize_group`, `settle_expense`, `batch_settle` |
 | **Ledger Initialized** | ✅ Yes (`is_initialized = true`) |
 | **CI Pipeline** | ✅ Passing ([GitHub Actions](https://github.com/Gokul-social/Midnight_proj/actions)) |
