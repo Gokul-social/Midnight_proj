@@ -473,25 +473,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
           false,
         );
 
-        const proofServerUrl = import.meta.env.VITE_PROOF_SERVER_URI ?? 'http://localhost:6300';
+        // When running locally via `npm run dev`, Vite proxies /proof-server/* → localhost:6300/*
+        // (no CORS issues). Set VITE_PROOF_SERVER_URI for other environments.
+        const proofServerBase = import.meta.env.VITE_PROOF_SERVER_URI
+          ? import.meta.env.VITE_PROOF_SERVER_URI as string
+          : '/proof-server'; // Vite proxy (local dev only)
+
         let proofServerReady = false;
 
-        try {
-          const health = await fetch(`${proofServerUrl}/health`, {
-            signal: AbortSignal.timeout(3000),
-          });
-          proofServerReady = health.ok;
-        } catch {
-          proofServerReady = false;
+        // Try several common health endpoints in sequence
+        for (const endpoint of ['/health', '/status', '/']) {
+          try {
+            const res = await fetch(`${proofServerBase}${endpoint}`, {
+              signal: AbortSignal.timeout(3000),
+            });
+            // Any response (even 404) means the server is listening
+            if (res.status < 600) {
+              proofServerReady = true;
+              break;
+            }
+          } catch {
+            // connection refused / timeout — try next
+          }
         }
 
         if (!proofServerReady) {
           throw new Error(
-            `Proof server not running. To make real on-chain transactions:\n\n` +
+            `Proof server not running at ${proofServerBase}. To make real on-chain transactions:\n\n` +
             `docker run -d -p 6300:6300 midnightntwrk/proof-server:latest\n\n` +
-            `Then run the app locally:\n` +
-            `cd frontend && npm run dev\n\n` +
-            `The deployed Vercel version can connect your wallet but ZK proof generation requires the local Docker proof server. This is a Midnight network architectural requirement — proofs are generated on your device, not on the server.`
+            `Then restart the local dev server (Ctrl+C, then npm run dev)\n\n` +
+            `The Vite proxy will route requests from localhost:5173 to localhost:6300 without CORS issues.`
           );
         }
 
@@ -499,7 +510,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addPrivacyLog(
           'private_input',
           'Witness Prepared ✓',
-          `Proof server confirmed at ${proofServerUrl}. Expense amount (${amountMicroUnits.toLocaleString()} μ-units) stored as local ZK witness — NEVER leaves your device.`,
+          `Proof server confirmed at ${proofServerBase}. Expense amount (${amountMicroUnits.toLocaleString()} μ-units) stored as local ZK witness — NEVER leaves your device.`,
           true,
         );
         await new Promise(r => setTimeout(r, 800));
@@ -509,12 +520,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addPrivacyLog(
           'zk_proof',
           'Generating ZK Proof',
-          `Calling proof server: POST ${proofServerUrl}/prove — circuit: settle_expense. Proving amount > 0 ∧ amount ≤ 1B without revealing ${amountMicroUnits.toLocaleString()}.`,
+          `Calling proof server via proxy: POST ${proofServerBase}/prove — circuit: settle_expense. Proving amount > 0 ∧ amount ≤ 1B without revealing ${amountMicroUnits.toLocaleString()}.`,
           true,
         );
 
         // Call proof server to generate the ZK proof
-        const proveResponse = await fetch(`${proofServerUrl}/prove`, {
+        const proveResponse = await fetch(`${proofServerBase}/prove`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -582,7 +593,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         let newCount = state.ledger.settlement_count + 1n;
 
         try {
-          const indexerRes = await fetch(CONTRACT_CONFIG.network.indexerUri, {
+          const indexerEndpoint = import.meta.env.VITE_PROOF_SERVER_URI
+            ? CONTRACT_CONFIG.network.indexerUri
+            : '/indexer'; // Vite proxy for local dev
+          const indexerRes = await fetch(indexerEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
