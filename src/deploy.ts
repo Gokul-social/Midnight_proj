@@ -32,7 +32,7 @@ import { createInitialPrivateState, deriveGroupDebtHash } from './witnesses';
 
 const DEPLOYMENT_CONFIG = {
   /** Target network — override with MIDNIGHT_NETWORK env var */
-  network: (process.env['MIDNIGHT_NETWORK'] ?? 'preprod') as NetworkName,
+  network: (process.env['MIDNIGHT_NETWORK'] ?? 'preview') as NetworkName,
 
   /** Group identifier for this expense splitter deployment */
   groupId: process.env['GROUP_ID'] ?? 'midnight-expense-group-default',
@@ -40,10 +40,10 @@ const DEPLOYMENT_CONFIG = {
   /** Proof server URI */
   proofServerUri: process.env['MIDNIGHT_PROOF_SERVER_URI'] ?? 'http://localhost:6300',
 
-  /** Indexer URI (for Preprod) */
+  /** Indexer URI — Preview network (stable as of August 2026) */
   indexerUri:
     process.env['MIDNIGHT_INDEXER_URI'] ??
-    'https://indexer.preprod-01.midnight.network/api/v1/graphql',
+    'https://indexer.preview.midnight.network/api/v1/graphql',
 
   /** Private state storage path (leveldb) */
   privateStateDir: process.env['MIDNIGHT_PRIVATE_STATE_DIR'] ?? './.private-state',

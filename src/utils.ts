@@ -14,6 +14,13 @@ export const NETWORK_CONFIG = {
     proofServerUri: 'http://localhost:6300',
     networkId: 'undeployed' as const,
   },
+  preview: {
+    indexerUri: 'https://indexer.preview.midnight.network/api/v1/graphql',
+    proofServerUri: 'https://proof-server.preview.midnight.network',
+    nodeUri: 'https://rpc.preview.midnight.network',
+    networkId: 'TestNet' as const,
+    faucet: 'https://faucet.preview.midnight.network/',
+  },
   preprod: {
     indexerUri: 'https://indexer.preprod-01.midnight.network/api/v1/graphql',
     proofServerUri: 'https://proof-server.preprod-01.midnight.network',
