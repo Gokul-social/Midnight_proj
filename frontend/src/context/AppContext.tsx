@@ -131,6 +131,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
 interface AppContextType {
   state: AppState;
   connectWallet: () => Promise<void>;
+  connectDemo: () => Promise<void>;
   disconnectWallet: () => void;
   settleExpense: (amountMicroUnits: bigint) => Promise<void>;
   refreshLedger: () => Promise<void>;
@@ -204,7 +205,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }, 500);
 
-    return () => clearInterval(interval);
+    // Also listen for the extension ready event (some versions fire this)
+    const onLoad = () => {
+      if (checkForLace()) clearInterval(interval);
+    };
+    window.addEventListener('midnight:ready', onLoad);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('midnight:ready', onLoad);
+    };
   }, []);
 
   const addPrivacyLog = useCallback((
@@ -228,17 +238,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ----------------------------------------------------------
   // connectWallet
-  // Attempts real Lace first, falls back to demo simulation
+  // Attempts real Lace first.
+  // If Lace is not detected, shows error + actionable message.
+  // Use retryConnect after unlocking Lace wallet.
   // ----------------------------------------------------------
   const connectWallet = useCallback(async () => {
     dispatch({ type: 'WALLET_CONNECTING' });
     addPrivacyLog('private_input', 'Wallet Connection', 'Initiating DApp connector handshake with Lace...', false);
 
     try {
-        const mnLace = getMidnightLace();
+      // Re-check for Lace at connect time (extension may have loaded since page open)
+      const mnLace = getMidnightLace();
 
       if (mnLace) {
-        // ✅ REAL PATH — Midnight-enabled Lace extension detected
+        // ✅ REAL PATH — Midnight Lace extension detected
         dispatch({ type: 'LACE_DETECTED', detected: true });
         addPrivacyLog('public_update', 'Lace Detected', 'Midnight DApp connector found. Requesting wallet access...', false);
 
@@ -262,30 +275,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
           false,
         );
       } else {
-        // ⚠️ DEMO PATH — Lace extension not detected
-        // Demonstrates the full UX flow without real transactions
-        await new Promise(r => setTimeout(r, 1500));
-
-        // Preview network addresses use "lo1_" prefix
-        const simulatedAddress = `lo1_${Array.from({ length: 48 }, () =>
-          '0123456789abcdef'[Math.floor(Math.random() * 16)]
-        ).join('')}`;
-
+        // ⚠️ Lace not detected at this moment.
+        // Do NOT fall to demo — show error so user can unlock Lace and retry.
         dispatch({
-          type: 'WALLET_CONNECTED',
-          info: {
-            address: simulatedAddress,
-            network: CONTRACT_CONFIG.network.name,
-            balance: '5,000 tNIGHT',
-          },
-          isDemo: true,
+          type: 'WALLET_ERROR',
+          error: 'Midnight Lace not detected. Please: (1) unlock your Lace wallet, (2) enable it for this site, then click Connect again.',
         });
         addPrivacyLog(
           'public_update',
-          'Demo Mode Active',
-          'Midnight Lace extension not detected. Running ZK flow simulation — all privacy mechanics are real, transactions are local only. To use real wallet: install Midnight Lace from docs.midnight.network/develop/tutorial/using-the-dapp-connector/',
+          'Lace Not Found',
+          'window.midnight.mnLace not available. Unlock your Lace wallet (enter password), enable it for this domain, then click Connect again. If Lace is not installed, get it from docs.midnight.network/develop/tutorial/using-the-dapp-connector/',
           false,
         );
+        return; // Do not proceed to demo
       }
 
       await refreshLedgerInternal();
@@ -294,6 +296,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'WALLET_ERROR', error: msg });
       addPrivacyLog('public_update', 'Wallet Error', msg, false);
     }
+  }, [addPrivacyLog]);
+
+  // Demo connect — explicit opt-in only (for reviewers without Lace)
+  const connectDemo = useCallback(async () => {
+    dispatch({ type: 'WALLET_CONNECTING' });
+    addPrivacyLog('private_input', 'Demo Session', 'Starting demo session — ZK proof flow simulation.', false);
+    await new Promise(r => setTimeout(r, 1200));
+    const simulatedAddress = `lo1_${Array.from({ length: 48 }, () =>
+      '0123456789abcdef'[Math.floor(Math.random() * 16)]
+    ).join('')}`;
+    dispatch({
+      type: 'WALLET_CONNECTED',
+      info: { address: simulatedAddress, network: CONTRACT_CONFIG.network.name, balance: '5,000 tNIGHT (demo)' },
+      isDemo: true,
+    });
+    addPrivacyLog('public_update', 'Demo Session Active', 'Simulating ZK flow — no real transactions submitted.', false);
+    await refreshLedgerInternal();
   }, [addPrivacyLog]);
 
   const disconnectWallet = useCallback(() => {
@@ -437,7 +456,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   return (
     <AppContext.Provider
-      value={{ state, connectWallet, disconnectWallet, settleExpense, refreshLedger, clearPrivacyLog }}
+      value={{ state, connectWallet, connectDemo, disconnectWallet, settleExpense, refreshLedger, clearPrivacyLog }}
     >
       {children}
     </AppContext.Provider>

@@ -213,11 +213,7 @@ export function SettleExpenseForm() {
                 <div className="font-mono text-[10px] text-[#10b981]/60 uppercase tracking-widest">
                   ✓ Amount kept private — only proof submitted on-chain
                 </div>
-                {isDemo && (
-                  <div className="font-mono text-[10px] text-white/20 uppercase tracking-widest">
-                    [Demo] Real Lace + Docker proof server required for on-chain settlement
-                  </div>
-                )}
+
               </div>
             )}
 

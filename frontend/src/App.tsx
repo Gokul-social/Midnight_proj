@@ -264,59 +264,191 @@ function LandingPage({ onLaunchApp }: { onLaunchApp: () => void }) {
 }
 
 // ────────────────────────────────────────────────────────────
+// Transaction Scanner Link
+// ────────────────────────────────────────────────────────────
+const EXPLORER_BASE = 'https://indexer.preview.midnight.network/api/v1/graphql';
+const CONTRACT_ADDR = 'lo1c7a6b2d657870656e73654d2fe2b3zk2025';
+
+function ExplorerLinks({ txHash }: { txHash?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyHash = () => {
+    if (!txHash) return;
+    navigator.clipboard.writeText(txHash).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="border border-white/[0.06] bg-black p-4 space-y-3">
+      <p className="font-mono text-[10px] text-white/25 uppercase tracking-widest">Transaction Scanner</p>
+      <div className="space-y-2">
+        <a
+          href={EXPLORER_BASE}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 font-mono text-[11px] text-[#0000FF] hover:text-white transition-colors group"
+        >
+          <span className="text-white/20 group-hover:text-white transition-colors">→</span>
+          Preview Indexer (GraphQL)
+        </a>
+        <a
+          href={`${EXPLORER_BASE}?query=${encodeURIComponent(`{\n  contract(address:"${CONTRACT_ADDR}") {\n    state { total_settled settlement_count is_initialized }\n  }\n}`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 font-mono text-[11px] text-[#0000FF] hover:text-white transition-colors group"
+        >
+          <span className="text-white/20 group-hover:text-white transition-colors">→</span>
+          Query Contract State
+        </a>
+        {txHash && (
+          <button
+            onClick={copyHash}
+            className="flex items-center gap-2 font-mono text-[11px] text-[#34d399] hover:text-white transition-colors cursor-pointer w-full text-left"
+          >
+            <span className="text-white/20">→</span>
+            {copied ? '✓ Copied!' : `Copy Tx: ${txHash.slice(0, 18)}...`}
+          </button>
+        )}
+        <p className="font-mono text-[9px] text-white/15 pt-1">
+          Contract: {CONTRACT_ADDR.slice(0, 20)}...
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────
 // App Dashboard (APP section)
 // ────────────────────────────────────────────────────────────
 function AppDashboard() {
-  const { state, connectWallet } = useApp();
+  const { state, connectWallet, connectDemo } = useApp();
   const isConnected = state.wallet.status === 'connected';
+  const isDemo = state.wallet.isDemo;
+  const isError = state.wallet.status === 'error';
+  const isConnecting = state.wallet.status === 'connecting';
+  const lastTxHash = state.settlement.lastResult?.txHash;
 
   return (
     <div className="flex flex-col w-full min-h-[calc(100vh-80px)]">
 
-      {/* Demo mode banner when not really connected to Lace */}
-      {isConnected && state.wallet.info?.balance === '1,250.00 tDUST' && (
-        <div className="w-full border-b border-[#f59e0b]/30 bg-[#f59e0b]/05 px-6 py-3 flex items-center gap-3">
-          <span className="font-mono text-xs text-[#fbbf24] uppercase tracking-widest">⚠ Demo Mode</span>
-          <span className="font-mono text-xs text-white/40">
-            No real Lace wallet detected — data is simulated. Install the Midnight Lace extension for real on-chain interaction.
-          </span>
+      {/* Demo mode banner — only when explicitly in demo */}
+      {isConnected && isDemo && (
+        <div className="w-full border-b border-[#fbbf24]/20 bg-[#fbbf24]/[0.04] px-6 py-2.5 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[10px] text-[#fbbf24] uppercase tracking-widest">⚠ Demo Mode</span>
+            <span className="font-mono text-[10px] text-white/35">
+              ZK proof flow is real — but transactions are local only. For on-chain: install Midnight Lace, disconnect, then reconnect.
+            </span>
+          </div>
+          <a
+            href="https://docs.midnight.network/develop/tutorial/using-the-dapp-connector/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-[10px] text-[#0000FF] hover:text-white transition-colors whitespace-nowrap uppercase tracking-widest"
+          >
+            Get Lace →
+          </a>
         </div>
       )}
 
       {/* Connect wall */}
       {!isConnected && (
-        <section className="flex-1 flex flex-col items-center justify-center py-32 px-4 text-center">
+        <section className="flex-1 flex flex-col items-center justify-center py-24 px-4 text-center">
           <div className="max-w-md mx-auto space-y-8">
-            <div className="w-20 h-20 bg-[#0000FF] mx-auto flex items-center justify-center">
-              <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-              </svg>
+            <div className={`w-20 h-20 mx-auto flex items-center justify-center ${isError ? 'bg-[#ef4444]/20 border border-[#ef4444]/30' : 'bg-[#0000FF]'}`}>
+              {isError ? (
+                <svg className="w-10 h-10 text-[#f87171]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+              ) : (
+                <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                </svg>
+              )}
             </div>
+
             <div>
-              <h2 className="font-bold text-3xl text-white uppercase tracking-tight mb-3">Connect Your Wallet</h2>
-              <p className="font-mono text-sm text-white/40 leading-relaxed">
-                Connect your Lace wallet on the Midnight Preview network to interact with the ZK Expense Splitter contract.
-              </p>
+              <h2 className="font-bold text-3xl text-white uppercase tracking-tight mb-3">
+                {isError ? 'Wallet Not Found' : 'Connect Your Wallet'}
+              </h2>
+
+              {isError ? (
+                <div className="space-y-3">
+                  <div className="border border-[#f87171]/20 bg-[#ef4444]/[0.04] p-4 text-left">
+                    <p className="font-mono text-[11px] text-[#f87171] leading-relaxed">
+                      {state.wallet.error}
+                    </p>
+                  </div>
+                  <div className="border border-white/[0.06] bg-black p-4 text-left space-y-1.5">
+                    <p className="font-mono text-[10px] text-white/40 uppercase tracking-widest mb-2">Steps to fix:</p>
+                    {[
+                      '1. Click the Lace extension icon in your browser toolbar',
+                      '2. Enter your wallet password to unlock it',
+                      '3. Make sure Midnight (Preview) is selected, not Cardano',
+                      '4. Click "Enable" if the site asks for permission',
+                      '5. Click Connect Lace below',
+                    ].map(s => (
+                      <p key={s} className="font-mono text-[11px] text-white/50">{s}</p>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="font-mono text-sm text-white/40 leading-relaxed">
+                    Connect your Midnight Lace wallet on the Preview network.
+                  </p>
+                  <div className="border border-white/[0.06] bg-black p-3 text-left space-y-1">
+                    <p className="font-mono text-[10px] text-white/30 uppercase tracking-widest mb-1">Before connecting:</p>
+                    <p className="font-mono text-[11px] text-white/40">• Unlock your Lace wallet (enter password)</p>
+                    <p className="font-mono text-[11px] text-white/40">• Switch to Midnight → Preview network</p>
+                    <p className="font-mono text-[11px] text-white/40">• Enable Lace for this domain if prompted</p>
+                  </div>
+                </div>
+              )}
             </div>
+
             <div className="space-y-3">
               <button
                 onClick={connectWallet}
-                disabled={state.wallet.status === 'connecting'}
+                disabled={isConnecting}
                 className="btn-primary w-full"
               >
-                {state.wallet.status === 'connecting' ? (
-                  <span className="animate-pulse">CONNECTING...</span>
-                ) : (
-                  'CONNECT LACE WALLET'
-                )}
+                {isConnecting ? (
+                  <span className="flex items-center gap-2 justify-center">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Connecting...
+                  </span>
+                ) : isError ? 'Retry Connect' : 'Connect Lace Wallet'}
               </button>
-              <p className="font-mono text-[11px] text-white/25 uppercase tracking-[0.15em]">
-                Preview Network Required
-              </p>
+
+              {/* Demo opt-in — clearly separated */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-white/[0.06]" />
+                <span className="font-mono text-[10px] text-white/20 uppercase tracking-widest">or</span>
+                <div className="flex-1 h-px bg-white/[0.06]" />
+              </div>
+              <button
+                onClick={connectDemo}
+                disabled={isConnecting}
+                className="w-full border border-white/10 text-white/40 font-mono text-[11px] uppercase tracking-widest py-2.5 hover:border-[#fbbf24]/30 hover:text-[#fbbf24]/60 transition-all disabled:opacity-40"
+              >
+                Try Demo Mode (no wallet required)
+              </button>
+
+              <a
+                href="https://docs.midnight.network/develop/tutorial/using-the-dapp-connector/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block font-mono text-[10px] text-[#0000FF] hover:text-white transition-colors uppercase tracking-widest"
+              >
+                Install Midnight Lace Extension →
+              </a>
             </div>
-            {state.wallet.error && (
-              <p className="font-mono text-xs text-[#f87171]">{state.wallet.error}</p>
-            )}
           </div>
         </section>
       )}
@@ -329,6 +461,8 @@ function AppDashboard() {
               <ExpenseDashboard />
               <PrivacyClaim />
               <PrivacyLog />
+              {/* Transaction Scanner */}
+              <ExplorerLinks txHash={lastTxHash} />
             </div>
             <div className="lg:col-span-2">
               <div className="lg:sticky lg:top-20">
@@ -341,6 +475,7 @@ function AppDashboard() {
     </div>
   );
 }
+
 
 // ────────────────────────────────────────────────────────────
 // Root layout
