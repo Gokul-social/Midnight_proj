@@ -19,24 +19,15 @@ import { CONTRACT_CONFIG, MAX_EXPENSE_AMOUNT } from '../lib/config';
 
 // ============================================================
 // TYPES FOR LACE MIDNIGHT DApp CONNECTOR
-// window.midnight.mnLace is injected by the Lace browser extension
-// with Midnight support enabled.
+//
+// v3 API (pre-2026): window.midnight.mnLace (fixed key)
+// v4+ API (2026+):   window.midnight[<uuid>] (dynamic key, find by wallet.name)
+//
+// Both APIs are supported below via getMidnightLace() enumeration.
 // ============================================================
 
 interface MidnightWindow {
-  midnight?: {
-    mnLace?: {
-      apiVersion: string;
-      name: string;
-      isEnabled: () => Promise<boolean>;
-      enable: () => Promise<{
-        getAddress: () => Promise<string>;
-        getNetworkId: () => Promise<string>;
-        getBalance: () => Promise<string>;
-        submitTx: (txHex: string) => Promise<string>;
-      }>;
-    };
-  };
+  midnight?: Record<string, unknown>; // v4: dynamic keys; v3: { mnLace: ... }
 }
 
 // ============================================================
@@ -141,30 +132,102 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 // ============================================================
-// LACE DETECTION UTILITY
+// MIDNIGHT WALLET DETECTION — v3 + v4+ COMPATIBLE
 // ============================================================
 
+/**
+ * Wallet entry shape (both v3 mnLace and v4+ dynamic keys)
+ */
 type MnLaceAPI = {
-  apiVersion: string;
-  name: string;
-  isEnabled: () => Promise<boolean>;
-  enable: () => Promise<{
-    getAddress: () => Promise<string>;
-    getNetworkId: () => Promise<string>;
-    getBalance: () => Promise<string>;
-    submitTx: (txHex: string) => Promise<string>;
-  }>;
+  apiVersion?: string;
+  name?: string;
+  icon?: string;
+  // v3 method
+  enable?: () => Promise<WalletSessionAPI>;
+  isEnabled?: () => Promise<boolean>;
+  // v4+ method
+  connect?: (networkId: string) => Promise<WalletSessionAPI>;
+  // some versions expose both
 };
 
-function getMidnightLace(): MnLaceAPI | null {
+type WalletSessionAPI = {
+  getAddress?: () => Promise<string>;
+  getNetworkId?: () => Promise<string>;
+  getBalance?: () => Promise<string>;
+  submitTx?: (txHex: string) => Promise<string>;
+  // v4+ may expose state getter
+  coinPublicKey?: string;
+  encryptionPublicKey?: string;
+};
+
+/**
+ * Enumerate window.midnight to find a Lace/Midnight wallet entry.
+ *
+ * Supports:
+ *  - v3 API: window.midnight.mnLace  (fixed key, pre-2026)
+ *  - v4+ API: window.midnight[uuid]  (dynamic UUID key, 2026+)
+ *
+ * Returns the wallet entry and its key, or null if none found.
+ */
+function getMidnightLace(): { wallet: MnLaceAPI; key: string } | null {
   try {
-    const w = window as unknown as MidnightWindow;
-    return (w.midnight?.mnLace as MnLaceAPI | undefined) ?? null;
-  } catch {
+    const midnight = (window as unknown as MidnightWindow).midnight;
+    if (!midnight || typeof midnight !== 'object') return null;
+
+    const entries = Object.entries(midnight);
+    console.log('[Midnight Diagnostic] window.midnight keys:', Object.keys(midnight));
+
+    // --- v3 check: fixed 'mnLace' key ---
+    if ('mnLace' in midnight) {
+      const entry = midnight['mnLace'] as MnLaceAPI;
+      if (entry && (typeof entry.enable === 'function' || typeof entry.connect === 'function')) {
+        console.log('[Midnight Diagnostic] Found v3 mnLace entry:', entry.name, 'v', entry.apiVersion);
+        return { wallet: entry, key: 'mnLace' };
+      }
+    }
+
+    // --- v4+ check: dynamic UUID keys, find by name or duck-type ---
+    for (const [key, val] of entries) {
+      if (key === 'mnLace') continue; // already checked
+      const entry = val as MnLaceAPI;
+      if (
+        entry &&
+        typeof entry === 'object' &&
+        (typeof entry.enable === 'function' || typeof entry.connect === 'function')
+      ) {
+        console.log('[Midnight Diagnostic] Found v4+ dynamic key wallet:', key, entry.name, 'v', entry.apiVersion);
+        return { wallet: entry, key };
+      }
+    }
+
+    console.log('[Midnight Diagnostic] window.midnight exists but no usable wallet entry found.');
+    return null;
+  } catch (e) {
+    console.warn('[Midnight Diagnostic] Error accessing window.midnight:', e);
     return null;
   }
 }
 
+/**
+ * Diagnose the full browser wallet state for debugging.
+ * Call this from the browser console: window.__midnightDiag()
+ */
+function installDiagnostic() {
+  try {
+    (window as unknown as Record<string, unknown>)['__midnightDiag'] = () => {
+      const midnight = (window as unknown as MidnightWindow).midnight;
+      const cardano = (window as unknown as Record<string, unknown>)['cardano'];
+      console.group('Midnight DApp Connector Diagnostic');
+      console.log('window.midnight:', midnight);
+      console.log('window.midnight keys:', midnight ? Object.keys(midnight) : 'N/A');
+      console.log('window.cardano:', cardano);
+      console.log('window.cardano.lace:', (cardano as Record<string, unknown> | undefined)?.['lace']);
+      console.log('Detected wallet:', getMidnightLace());
+      console.groupEnd();
+    };
+    console.log('[Midnight dApp] Diagnostic available. Run window.__midnightDiag() in console to debug.');
+  } catch { /* non-critical */ }
+}
 
 // ============================================================
 // PROVIDER
@@ -172,25 +235,22 @@ function getMidnightLace(): MnLaceAPI | null {
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const walletApiRef = useRef<{
-    getAddress: () => Promise<string>;
-    getNetworkId: () => Promise<string>;
-    getBalance: () => Promise<string>;
-    submitTx: (txHex: string) => Promise<string>;
-  } | null>(null);
+  const walletApiRef = useRef<WalletSessionAPI | null>(null);
 
   // ----------------------------------------------------------
-  // Poll for Lace extension injection (extensions inject async)
-  // Retry for up to 5 seconds after page load
+  // Poll for Lace extension injection + install browser diagnostic
   // ----------------------------------------------------------
   useEffect(() => {
+    installDiagnostic();
+
     let attempts = 0;
-    const maxAttempts = 10; // 10 × 500ms = 5 seconds
+    const maxAttempts = 20; // 20 × 500ms = 10 seconds
 
     const checkForLace = () => {
-      const mnLace = getMidnightLace();
-      if (mnLace) {
+      const found = getMidnightLace();
+      if (found) {
         dispatch({ type: 'LACE_DETECTED', detected: true });
+        console.log('[Midnight] Lace detected on poll:', found.key, found.wallet.name);
         return true;
       }
       return false;
@@ -205,16 +265,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }, 500);
 
-    // Also listen for the extension ready event (some versions fire this)
-    const onLoad = () => {
+    const onReady = () => {
       if (checkForLace()) clearInterval(interval);
     };
-    window.addEventListener('midnight:ready', onLoad);
+    window.addEventListener('midnight:ready', onReady);
+    window.addEventListener('midnight:wallet:added', onReady);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('midnight:ready', onLoad);
+      window.removeEventListener('midnight:ready', onReady);
+      window.removeEventListener('midnight:wallet:added', onReady);
     };
+
   }, []);
 
   const addPrivacyLog = useCallback((
@@ -244,24 +306,44 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ----------------------------------------------------------
   const connectWallet = useCallback(async () => {
     dispatch({ type: 'WALLET_CONNECTING' });
-    addPrivacyLog('private_input', 'Wallet Connection', 'Initiating DApp connector handshake with Lace...', false);
+    addPrivacyLog('private_input', 'Wallet Connection', 'Initiating DApp connector handshake (v3+v4 compatible)...', false);
 
     try {
-      // Re-check for Lace at connect time (extension may have loaded since page open)
-      const mnLace = getMidnightLace();
+      // Re-check for Lace at connect time using v3+v4 enumeration
+      const found = getMidnightLace();
 
-      if (mnLace) {
-        // ✅ REAL PATH — Midnight Lace extension detected
+      if (found) {
+        const { wallet } = found;
         dispatch({ type: 'LACE_DETECTED', detected: true });
-        addPrivacyLog('public_update', 'Lace Detected', 'Midnight DApp connector found. Requesting wallet access...', false);
+        addPrivacyLog('public_update', 'Lace Detected', `Midnight DApp connector found (${found.key}). Requesting access...`, false);
 
-        const api = await mnLace.enable();
+        // Support both v4 connect(networkId) and v3 enable()
+        let api: WalletSessionAPI;
+        if (typeof wallet.connect === 'function') {
+          // v4+ API
+          api = await wallet.connect('preview');
+        } else if (typeof wallet.enable === 'function') {
+          // v3 API
+          api = await wallet.enable();
+        } else {
+          throw new Error('Wallet found but no connect() or enable() method available.');
+        }
+
         walletApiRef.current = api;
 
-        const address = await api.getAddress();
-        const networkId = await api.getNetworkId().catch(() => 'TestNet');
+        // Extract address — may be in different places depending on API version
+        const address = typeof api.getAddress === 'function'
+          ? await api.getAddress()
+          : api.coinPublicKey ?? `lo1_${found.key.slice(0, 20)}`;
+
+        const networkId = typeof api.getNetworkId === 'function'
+          ? await api.getNetworkId().catch(() => 'TestNet')
+          : 'TestNet';
+
         let balance = '—';
-        try { balance = await api.getBalance(); } catch { /* balance optional */ }
+        try {
+          if (typeof api.getBalance === 'function') balance = await api.getBalance();
+        } catch { /* balance optional */ }
 
         dispatch({
           type: 'WALLET_CONNECTED',
@@ -271,23 +353,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         addPrivacyLog(
           'public_update',
           'Wallet Connected ✓',
-          `Real Lace wallet. Address: ${address.slice(0, 16)}... | Network: ${networkId}`,
+          `Real Lace wallet (${found.key}). Address: ${address.slice(0, 16)}... | Network: ${networkId}`,
           false,
         );
       } else {
-        // ⚠️ Lace not detected at this moment.
-        // Do NOT fall to demo — show error so user can unlock Lace and retry.
-        dispatch({
-          type: 'WALLET_ERROR',
-          error: 'Midnight Lace not detected. Please: (1) unlock your Lace wallet, (2) enable it for this site, then click Connect again.',
-        });
-        addPrivacyLog(
-          'public_update',
-          'Lace Not Found',
-          'window.midnight.mnLace not available. Unlock your Lace wallet (enter password), enable it for this domain, then click Connect again. If Lace is not installed, get it from docs.midnight.network/develop/tutorial/using-the-dapp-connector/',
-          false,
-        );
-        return; // Do not proceed to demo
+        // Lace not found — show diagnostic error, do NOT fall to demo
+        const midnight = (window as unknown as MidnightWindow).midnight;
+        const hasMidnightNs = !!midnight;
+        const midnightKeys = midnight ? Object.keys(midnight).join(', ') : 'none';
+
+        const errorMsg = hasMidnightNs
+          ? `window.midnight found (keys: ${midnightKeys}) but no wallet entry with enable()/connect(). Check Lace extension is set to Midnight (not Cardano) and this domain is authorized.`
+          : 'window.midnight is undefined — Lace Midnight extension not detected. Unlock Lace, switch to Midnight network, and ensure it is enabled for this site.';
+
+        dispatch({ type: 'WALLET_ERROR', error: errorMsg });
+        addPrivacyLog('public_update', 'Lace Not Found', errorMsg, false);
+        return;
       }
 
       await refreshLedgerInternal();
