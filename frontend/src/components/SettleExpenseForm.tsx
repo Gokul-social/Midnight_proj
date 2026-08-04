@@ -217,9 +217,36 @@ export function SettleExpenseForm() {
               </div>
             )}
 
-            {settlement.proofStage === 'error' && settlement.error && (
-              <p className="font-mono text-[11px] text-[#f87171]">{settlement.error}</p>
-            )}
+            {settlement.proofStage === 'error' && settlement.error && (() => {
+              const isProofServerError = settlement.error.includes('Proof server not running');
+              if (isProofServerError) {
+                return (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2">
+                      <span className="text-[#f87171] text-lg leading-none mt-0.5">⚠</span>
+                      <p className="font-mono text-[11px] text-[#f87171] leading-relaxed">
+                        Proof server not running — required for real ZK transactions.
+                      </p>
+                    </div>
+                    <div className="border border-white/[0.06] bg-[#0a0a0a] p-3 space-y-2">
+                      <p className="font-mono text-[9px] text-white/30 uppercase tracking-widest">Step 1 — Start proof server (Docker):</p>
+                      <code className="block font-mono text-[10px] text-[#34d399] bg-black/60 px-2 py-1.5 rounded">
+                        docker run -d -p 6300:6300 midnightntwrk/proof-server:latest
+                      </code>
+                      <p className="font-mono text-[9px] text-white/30 uppercase tracking-widest mt-2">Step 2 — Run app locally:</p>
+                      <code className="block font-mono text-[10px] text-[#60a5fa] bg-black/60 px-2 py-1.5 rounded">
+                        cd frontend && npm run dev
+                      </code>
+                      <p className="font-mono text-[9px] text-white/20 mt-2 leading-relaxed">
+                        The deployed Vercel version connects your wallet but cannot generate ZK proofs — this is a Midnight architectural requirement. Proofs are computed on your device, not the server.
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+              return <p className="font-mono text-[11px] text-[#f87171] leading-relaxed">{settlement.error}</p>;
+            })()}
+
           </div>
         )}
       </div>
