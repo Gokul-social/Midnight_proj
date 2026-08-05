@@ -1,6 +1,6 @@
 // ============================================================
 // ZK Expense Splitter — Compact Smart Contract
-// Midnight Network Builder Program — Level 1 Submission
+// Midnight Network Builder Program — Level 3 Submission
 //
 // Architecture:
 //   • export ledger  → Public on-chain state (settlement proofs)
@@ -13,7 +13,7 @@
 // computed, verified aggregate proof of settlement is disclosed.
 // ============================================================
 
-pragma language_version >= 0.23;
+pragma language_version >= 0.14;
 
 import CompactStandardLibrary;
 
@@ -30,7 +30,6 @@ export ledger settlement_count: Uint<64>;
 
 // A cryptographic commitment (hash) representing the group's initial
 // shared expense agreement. Set at initialization, never changed.
-// Members prove they belong to a group by knowing the preimage.
 export ledger group_debt_hash: Bytes<32>;
 
 // Tracks whether the contract has been initialized
@@ -45,27 +44,20 @@ export ledger is_initialized: Boolean;
 // The private expense amount being settled (raw, never disclosed)
 witness get_expense_amount(): Uint<64>;
 
-// A secret known only to valid group members — used to verify membership
-// without revealing identity. Think of it as a group membership token.
+// A secret known only to valid group members
 witness get_member_secret(): Bytes<32>;
 
 // A 4-element vector of private individual expense contributions
-// Used in batch settlement to prove all members have contributed
-// without revealing any individual amount
 witness get_group_expenses(): Vector<4, Uint<64>>;
 
 // ============================================================
 // CIRCUITS — ZK logic that generates zero-knowledge proofs
-// These run off-chain (in the Proof Server) and produce proofs
-// that are verified on-chain without revealing private inputs.
 // ============================================================
 
 // Initialize the group expense contract with an agreed debt commitment.
-// The debt_hash is a hash of the agreed expense split terms, agreed
-// off-chain by group members. This is the ONLY public parameter.
 export circuit initialize_group(debt_hash: Bytes<32>): [] {
     // Ensure the contract is only initialized once
-    assert !is_initialized "Contract already initialized";
+    assert(is_initialized == false, "Contract already initialized");
 
     // Disclose the agreed group hash to the public ledger
     group_debt_hash = disclose(debt_hash);
@@ -89,23 +81,22 @@ export circuit initialize_group(debt_hash: Bytes<32>): [] {
 //   • Any other transaction details
 export circuit settle_expense(): [] {
     // Contract must be initialized
-    assert is_initialized "Contract not yet initialized";
+    assert(is_initialized == true, "Contract not yet initialized");
 
     // Fetch private expense amount from witness (runs off-chain only)
     const expense_amount: Uint<64> = get_expense_amount();
 
     // Validate: expense must be positive (enforced in ZK circuit)
-    assert expense_amount > (0 as Uint<64>) "Expense amount must be positive";
+    assert(expense_amount > (0 as Uint<64>), "Expense amount must be positive");
 
     // Validate: expense must be within reasonable bounds (anti-abuse)
-    assert expense_amount <= (1000000000 as Uint<64>) "Expense amount exceeds maximum";
+    assert(expense_amount <= (1000000000 as Uint<64>), "Expense amount exceeds maximum");
 
     // Safe arithmetic: check for overflow before updating total
-    // We widen to Uint<128> for the addition to prevent overflow
     const expense_as_u128: Uint<128> = expense_amount as Uint<128>;
     const max_safe: Uint<128> = (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF as Uint<128>);
 
-    assert total_settled <= max_safe - expense_as_u128 "Settlement would overflow total";
+    assert(total_settled <= max_safe - expense_as_u128, "Settlement would overflow total");
 
     // Compute new total — only the RESULT is disclosed, not the input
     const new_total: Uint<128> = (total_settled + expense_as_u128) as Uint<128>;
@@ -115,7 +106,7 @@ export circuit settle_expense(): [] {
     total_settled = disclose(new_total);
 
     // Increment settlement count safely
-    assert settlement_count < (0xFFFFFFFFFFFFFFFF as Uint<64>) "Settlement count overflow";
+    assert(settlement_count < (0xFFFFFFFFFFFFFFFF as Uint<64>), "Settlement count overflow");
     const new_count: Uint<64> = (settlement_count + (1 as Uint<64>)) as Uint<64>;
     settlement_count = disclose(new_count);
 }
@@ -129,43 +120,40 @@ export circuit settle_expense(): [] {
 //
 // min_threshold: The minimum total that must be covered (public parameter)
 export circuit batch_settle(min_threshold: Uint<64>): [] {
-    assert is_initialized "Contract not yet initialized";
+    assert(is_initialized == true, "Contract not yet initialized");
 
     // Fetch private expense vector from witness (all 4 amounts are private)
     const expenses: Vector<4, Uint<64>> = get_group_expenses();
 
     // Sum all 4 expense contributions privately
-    // These intermediate values exist only in the ZK circuit, never on-chain
     const e0: Uint<64> = expenses[0];
     const e1: Uint<64> = expenses[1];
     const e2: Uint<64> = expenses[2];
     const e3: Uint<64> = expenses[3];
 
     // Widen to prevent overflow during summation
-    const sum_01: Uint<128> = (e0 as Uint<128>) + (e1 as Uint<128>);
-    const sum_23: Uint<128> = (e2 as Uint<128>) + (e3 as Uint<128>);
-    const total_expenses: Uint<128> = (sum_01 + sum_23) as Uint<128>;
+    const sum_01 = (e0 as Uint<128>) + (e1 as Uint<128>);
+    const sum_23 = (e2 as Uint<128>) + (e3 as Uint<128>);
+    const total_expenses = sum_01 + sum_23;
 
     // ZK assertion: the private sum meets the public minimum threshold
-    // This proves "the group covered at least X" without revealing individual shares
-    assert total_expenses >= (min_threshold as Uint<128>) "Group expenses below required threshold";
+    assert(total_expenses >= (min_threshold as Uint<128>), "Group expenses below required threshold");
 
     // Safe overflow check for total_settled
     const max_safe: Uint<128> = (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF as Uint<128>);
-    assert total_settled <= max_safe - total_expenses "Batch settlement would overflow total";
+    assert(total_settled <= max_safe - total_expenses, "Batch settlement would overflow total");
 
     // Update public ledger: only the new total is disclosed, not individual amounts
-    const new_total: Uint<128> = (total_settled + total_expenses) as Uint<128>;
-    total_settled = disclose(new_total);
+    const new_total = total_settled + total_expenses;
+    total_settled = disclose(new_total as Uint<128>);
 
     // Increment settlement count — represents one complete batch round
-    assert settlement_count < (0xFFFFFFFFFFFFFFFF as Uint<64>) "Settlement count overflow";
+    assert(settlement_count < (0xFFFFFFFFFFFFFFFF as Uint<64>), "Settlement count overflow");
     const new_count: Uint<64> = (settlement_count + (1 as Uint<64>)) as Uint<64>;
     settlement_count = disclose(new_count);
 }
 
 // Read-only query: verify a settlement count without state mutation.
-// This is a pure view circuit — no state changes, no proof needed.
 export circuit verify_settlement_count(expected_count: Uint<64>): Boolean {
     return settlement_count == expected_count;
 }

@@ -1,0 +1,141 @@
+{
+  "compiler-version": "0.31.1",
+  "language-version": "0.23.0",
+  "runtime-version": "0.16.0",
+  "circuits": [
+    {
+      "name": "initialize_group",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "debt_hash",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "settle_expense",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "batch_settle",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "min_threshold",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "verify_settlement_count",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+        {
+          "name": "expected_count",
+          "type": {
+            "type-name": "Uint",
+            "maxval": 18446744073709551615
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Boolean"
+      }
+    }
+  ],
+  "witnesses": [
+    {
+      "name": "get_expense_amount",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Uint",
+        "maxval": 18446744073709551615
+      }
+    },
+    {
+      "name": "get_group_expenses",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Vector",
+        "length": 4,
+        "type": {
+          "type-name": "Uint",
+          "maxval": 18446744073709551615
+        }
+      }
+    }
+  ],
+  "contracts": [
+  ],
+  "ledger": [
+    {
+      "name": "total_settled",
+      "index": 0,
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Uint",
+        "maxval": 340282366920938463463374607431768211455
+      }
+    },
+    {
+      "name": "settlement_count",
+      "index": 1,
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Uint",
+        "maxval": 18446744073709551615
+      }
+    },
+    {
+      "name": "group_debt_hash",
+      "index": 2,
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "is_initialized",
+      "index": 3,
+      "exported": true,
+      "storage": "Cell",
+      "type": {
+        "type-name": "Boolean"
+      }
+    }
+  ]
+}
