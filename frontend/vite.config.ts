@@ -1,12 +1,22 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import path from 'path'
 
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
   ],
+  resolve: {
+    alias: {
+      // Allow frontend to import compiled contract from project root
+      '@contract': path.resolve(__dirname, '../managed/contract/index.js'),
+      // Allow compact-runtime from root node_modules
+      '@midnight-ntwrk/compact-runtime': path.resolve(__dirname, '../node_modules/@midnight-ntwrk/compact-runtime/dist/index.js'),
+      '@midnight-ntwrk/midnight-js-http-client-proof-provider': path.resolve(__dirname, '../node_modules/@midnight-ntwrk/midnight-js-http-client-proof-provider/dist/index.js'),
+    },
+  },
   server: {
     port: 5173,
     open: true,
