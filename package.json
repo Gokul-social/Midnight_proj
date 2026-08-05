@@ -7,8 +7,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "compile": "compactc contract/src/zk_expense_splitter.compact managed",
-    "build:contract": "compactc contract/src/zk_expense_splitter.compact managed",
+    "compile": "compactc compile contract/src/zk_expense_splitter.compact managed",
+    "build:contract": "compactc compile contract/src/zk_expense_splitter.compact managed",
     "test": "jest --testPathPattern=tests/ --forceExit",
     "test:watch": "jest --testPathPattern=tests/ --watch",
     "deploy": "ts-node src/deploy.ts",
