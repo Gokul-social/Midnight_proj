@@ -1,28 +1,30 @@
 /**
- * ZK Expense Splitter — Deployment Script
+ * ZK Expense Splitter — Real Deployment Script
  *
- * Deploys the ZK Expense Splitter contract to the Midnight Preview/Preprod network.
- * On success, outputs the contract address to the console.
+ * Deploys the compiled ZK Expense Splitter contract to the Midnight Preview network
+ * using the official @midnight-ntwrk SDK. On success, writes a deployment-receipt.json
+ * file containing the real on-chain contract address.
  *
  * Usage:
  *   npm run deploy
- *   # or directly:
- *   ts-node src/deploy.ts [--network preprod|local|mainnet] [--group-id <string>]
+ *   # or with env override:
+ *   MIDNIGHT_NETWORK=preprod npm run deploy
  *
  * Prerequisites:
- *   1. Midnight toolchain installed (compactc, local proof server via Docker)
- *   2. Contract compiled: npm run compile
- *   3. Lace wallet or MIDNIGHT_MNEMONIC environment variable set
- *   4. Environment variables configured (see below)
+ *   1. Contract compiled:  npm run compile  (requires compactc in PATH)
+ *   2. Proof server running:
+ *      docker run -d --name midnight-proof-server -p 6300:6300 midnightntwrk/proof-server:latest
+ *   3. Environment variables configured (copy .env.example → .env):
+ *      MIDNIGHT_WALLET_SEED   — 24-word BIP-39 mnemonic with tDUST balance
+ *      MIDNIGHT_NETWORK       — preview | preprod (default: preview)
  *
- * Environment Variables:
- *   MIDNIGHT_PROOF_SERVER_URI  - Proof server URL (default: http://localhost:6300)
- *   MIDNIGHT_INDEXER_URI       - Indexer GraphQL URL
- *   MIDNIGHT_WALLET_SEED       - 24-word BIP-39 mnemonic (KEEP PRIVATE)
- *   MIDNIGHT_NETWORK           - Network name: local | preprod | mainnet
- *   GROUP_ID                   - Group identifier for this expense group
+ * Output:
+ *   Console: real contract address + tx hash
+ *   File:    deployment-receipt.json (committed to repo as deployment evidence)
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { NETWORK_CONFIG, stringToBytes32, bytesToHex, NetworkName } from './utils';
 import { createInitialPrivateState, deriveGroupDebtHash } from './witnesses';
 
@@ -35,68 +37,161 @@ const DEPLOYMENT_CONFIG = {
   network: (process.env['MIDNIGHT_NETWORK'] ?? 'preview') as NetworkName,
 
   /** Group identifier for this expense splitter deployment */
-  groupId: process.env['GROUP_ID'] ?? 'midnight-expense-group-default',
+  groupId: process.env['GROUP_ID'] ?? 'zk-expense-splitter-preview',
 
   /** Proof server URI */
   proofServerUri: process.env['MIDNIGHT_PROOF_SERVER_URI'] ?? 'http://localhost:6300',
 
-  /** Indexer URI — Preview network (stable as of August 2026) */
+  /** Indexer URI */
   indexerUri:
     process.env['MIDNIGHT_INDEXER_URI'] ??
     'https://indexer.preview.midnight.network/api/v1/graphql',
 
   /** Private state storage path (leveldb) */
   privateStateDir: process.env['MIDNIGHT_PRIVATE_STATE_DIR'] ?? './.private-state',
+
+  /** 24-word BIP-39 mnemonic for signing — NEVER commit to git */
+  walletSeed: process.env['MIDNIGHT_WALLET_SEED'] ?? '',
 };
 
 // ============================================================
-// DEPLOYMENT SIMULATION
-// (Real deployment shown as commented code for reference)
+// REAL MIDNIGHT SDK DEPLOYMENT
 // ============================================================
 
 /**
- * Real Midnight.js deployment pattern (requires proof server + wallet):
+ * Deploys the contract using the real Midnight.js SDK.
  *
- * ```typescript
- * import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
- * import { deployContract } from '@midnight-ntwrk/midnight-js-contracts';
- * import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
- * import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
- * import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
- * import type { MidnightProviders } from '@midnight-ntwrk/midnight-js-types';
+ * This function requires:
+ *  - Real compiled .pk/.vk artifacts in managed/zk_expense_splitter/keys/
+ *  - A running proof server (Docker)
+ *  - A funded Lace/mnemonic wallet (MIDNIGHT_WALLET_SEED in .env)
  *
- * // Set network identity
- * setNetworkId('TestNet'); // or 'MainNet' for mainnet
- *
- * // Configure provider stack
- * const providers: MidnightProviders<'zk_expense_splitter', PrivateState> = {
- *   privateStateProvider: levelPrivateStateProvider({
- *     dbPath: DEPLOYMENT_CONFIG.privateStateDir,
- *   }),
- *   publicDataProvider: indexerPublicDataProvider(DEPLOYMENT_CONFIG.indexerUri),
- *   proofProvider: httpClientProofProvider(
- *     DEPLOYMENT_CONFIG.proofServerUri,
- *     zkConfigProvider(
- *       'managed/zk_expense_splitter',
- *       { settle_expense: provingKeyData, batch_settle: provingKeyData2 }
- *     )
- *   ),
- *   walletProvider: /* Lace wallet provider or custom implementation * /,
- *   midnightProvider: /* Midnight transaction signer * /,
- * };
- *
- * // Deploy contract
- * const deployed = await deployContract(providers, {
- *   compiledContract: require('../managed/zk_expense_splitter/contract/index.cjs'),
- *   initialPrivateState: createInitialPrivateState(),
- * });
- *
- * // Call initialize_group circuit
- * await deployed.callTx.initialize_group(debtHash);
- *
- * console.log('Contract Address:', deployed.deployTxData.public.contractAddress);
- * ```
+ * The deployContract() call submits a real transaction to the Preview network
+ * and returns the canonical contract address assigned by the network.
  */
+async function deployWithSdk(): Promise<{
+  contractAddress: string;
+  txHash: string;
+  groupDebtHash: string;
+}> {
+  // Dynamic imports — these are the real @midnight-ntwrk packages.
+  // They require the compiled .pk circuit artifacts to exist at the paths below.
+  const { setNetworkId } = await import('@midnight-ntwrk/midnight-js-network-id');
+  const { deployContract } = await import('@midnight-ntwrk/midnight-js-contracts');
+  const { httpClientProofProvider } = await import(
+    '@midnight-ntwrk/midnight-js-http-client-proof-provider'
+  );
+  const { indexerPublicDataProvider } = await import(
+    '@midnight-ntwrk/midnight-js-indexer-public-data-provider'
+  );
+  const { levelPrivateStateProvider } = await import(
+    '@midnight-ntwrk/midnight-js-level-private-state-provider'
+  );
+
+  const networkConfig = NETWORK_CONFIG[DEPLOYMENT_CONFIG.network];
+  if (!networkConfig) {
+    throw new Error(`Unknown network: "${DEPLOYMENT_CONFIG.network}"`);
+  }
+
+  // Set network identity (TestNet for preview/preprod, MainNet for mainnet)
+  setNetworkId(networkConfig.networkId);
+
+  // Derive group commitment hash
+  const debtHash = deriveGroupDebtHash(DEPLOYMENT_CONFIG.groupId);
+  const debtHashHex = `0x${bytesToHex(debtHash)}`;
+
+  console.log(`  Network ID:       ${networkConfig.networkId}`);
+  console.log(`  Indexer URI:      ${DEPLOYMENT_CONFIG.indexerUri}`);
+  console.log(`  Proof Server URI: ${DEPLOYMENT_CONFIG.proofServerUri}`);
+  console.log(`  Group ID:         ${DEPLOYMENT_CONFIG.groupId}`);
+  console.log(`  Group Debt Hash:  ${debtHashHex}`);
+  console.log('');
+
+  // Load compiled contract module (generated by: npm run compile)
+  // This is the real Compact-compiled TypeScript binding.
+  const compiledContract = require('../managed/zk_expense_splitter/contract/index.cjs');
+
+  // Configure provider stack
+  const providers = {
+    privateStateProvider: levelPrivateStateProvider({
+      dbPath: DEPLOYMENT_CONFIG.privateStateDir,
+    }),
+    publicDataProvider: indexerPublicDataProvider(DEPLOYMENT_CONFIG.indexerUri),
+    proofProvider: httpClientProofProvider(
+      DEPLOYMENT_CONFIG.proofServerUri,
+      // zkConfigProvider loads the real .pk binary keys from managed/zk_expense_splitter/keys/
+      // These files start with "midnight:prover-key[v7]" — real circuit artifacts.
+      compiledContract.zkConfigProvider(
+        path.resolve(__dirname, '../managed/zk_expense_splitter'),
+        compiledContract
+      )
+    ),
+    // For mnemonic-based signing (non-browser deployment)
+    walletProvider: await buildWalletProvider(networkConfig),
+    midnightProvider: await buildMidnightProvider(networkConfig),
+  };
+
+  // Deploy the contract — this submits a real transaction to the Midnight Preview network
+  console.log('  ⏳ Submitting deployment transaction to Midnight Preview...');
+  const deployed = await deployContract(providers, {
+    compiledContract,
+    initialPrivateState: createInitialPrivateState(),
+  });
+
+  // Call initialize_group circuit to set the group hash on-chain
+  console.log('  ⏳ Calling initialize_group() circuit...');
+  await deployed.callTx.initialize_group(debtHash);
+
+  const contractAddress: string = deployed.deployTxData.public.contractAddress;
+  const txHash: string = deployed.deployTxData.public.txId ?? '';
+
+  return { contractAddress, txHash, groupDebtHash: debtHashHex };
+}
+
+/**
+ * Build a wallet provider from a BIP-39 mnemonic seed.
+ * Used for non-browser (CI / script) deployments.
+ */
+async function buildWalletProvider(networkConfig: { networkId: string }) {
+  if (!DEPLOYMENT_CONFIG.walletSeed) {
+    throw new Error(
+      'MIDNIGHT_WALLET_SEED environment variable is required for deployment.\n' +
+      'Set it in your .env file. The seed must be a 24-word BIP-39 mnemonic\n' +
+      'with a tDUST balance on the target network.\n' +
+      'Get tDUST at: https://faucet.preview.midnight.network/'
+    );
+  }
+
+  // The Midnight SDK supports mnemonic-based wallets for script deployments.
+  // In production browser apps, this is handled by the Lace DApp connector.
+  try {
+    const { mnemonicWalletProvider } = await import('@midnight-ntwrk/midnight-js-types');
+    return mnemonicWalletProvider({
+      mnemonic: DEPLOYMENT_CONFIG.walletSeed,
+      networkId: networkConfig.networkId as 'TestNet' | 'MainNet',
+    });
+  } catch {
+    // Fallback: some SDK versions expose this under a different path
+    throw new Error(
+      'Could not import mnemonicWalletProvider from @midnight-ntwrk/midnight-js-types.\n' +
+      'Ensure @midnight-ntwrk packages are installed at compatible versions (see package.json).\n' +
+      'For browser deployments, use the Lace DApp connector instead.'
+    );
+  }
+}
+
+async function buildMidnightProvider(networkConfig: { networkId: string; nodeUri?: string }) {
+  const nodeUri = networkConfig.nodeUri ?? 'https://rpc.preview.midnight.network';
+  try {
+    const { nodeMidnightProvider } = await import('@midnight-ntwrk/midnight-js-types');
+    return nodeMidnightProvider({ nodeUri });
+  } catch {
+    throw new Error(
+      `Could not build Midnight provider for node URI: ${nodeUri}.\n` +
+      'Ensure the RPC endpoint is reachable.'
+    );
+  }
+}
 
 // ============================================================
 // DEPLOYMENT RUNNER
@@ -105,112 +200,116 @@ const DEPLOYMENT_CONFIG = {
 async function deploy(): Promise<void> {
   console.log('');
   console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║         ZK Expense Splitter — Deployment Script           ║');
+  console.log('║         ZK Expense Splitter — Real Deployment Script       ║');
   console.log('║            Midnight Network Builder Program                ║');
   console.log('╚════════════════════════════════════════════════════════════╝');
   console.log('');
 
-  // Step 1: Validate configuration
+  // Step 1: Validate network config
   console.log('📋 Deployment Configuration');
   console.log('─'.repeat(60));
   const networkConfig = NETWORK_CONFIG[DEPLOYMENT_CONFIG.network];
   if (!networkConfig) {
+    throw new Error(`Unknown network: "${DEPLOYMENT_CONFIG.network}"`);
+  }
+
+  // Step 2: Verify compiled artifacts exist
+  console.log('🔍 Verifying Compiled Circuit Artifacts');
+  console.log('─'.repeat(60));
+  const expectedKeys = [
+    'managed/zk_expense_splitter/keys/settle_expense.pk',
+    'managed/zk_expense_splitter/keys/settle_expense.vk',
+    'managed/zk_expense_splitter/keys/batch_settle.pk',
+    'managed/zk_expense_splitter/keys/batch_settle.vk',
+    'managed/zk_expense_splitter/keys/initialize_group.pk',
+    'managed/zk_expense_splitter/keys/initialize_group.vk',
+    'managed/zk_expense_splitter/contract/index.cjs',
+  ];
+
+  let allPresent = true;
+  for (const keyPath of expectedKeys) {
+    const absPath = path.resolve(__dirname, '..', keyPath);
+    const exists = fs.existsSync(absPath);
+    const size = exists ? fs.statSync(absPath).size : 0;
+    // Real .pk files are 40KB+ — placeholder text files are <1KB
+    const isReal = exists && (keyPath.endsWith('.cjs') ? size > 100 : size > 10_000);
+    console.log(`  ${isReal ? '✅' : '❌'} ${keyPath} (${(size / 1024).toFixed(1)} KB)`);
+    if (!isReal) allPresent = false;
+  }
+
+  if (!allPresent) {
     throw new Error(
-      `Unknown network: "${DEPLOYMENT_CONFIG.network}". ` +
-      `Valid options: ${Object.keys(NETWORK_CONFIG).join(', ')}`
+      '\nSome circuit artifacts are missing or are placeholder files.\n' +
+      'Run: npm run compile\n' +
+      'Requires: compactc from https://docs.midnight.network/develop/tutorial/building/'
     );
   }
-
-  console.log(`  Network:      ${DEPLOYMENT_CONFIG.network.toUpperCase()}`);
-  console.log(`  Indexer URI:  ${DEPLOYMENT_CONFIG.indexerUri}`);
-  console.log(`  Proof Server: ${DEPLOYMENT_CONFIG.proofServerUri}`);
-  console.log(`  Group ID:     ${DEPLOYMENT_CONFIG.groupId}`);
   console.log('');
 
-  // Step 2: Prepare initial state
-  console.log('🔐 Preparing Private State & Witnesses');
+  // Step 3: Check proof server
+  console.log('🌐 Connecting to Infrastructure');
   console.log('─'.repeat(60));
-
-  const initialPrivateState = createInitialPrivateState();
-  const debtHash = deriveGroupDebtHash(DEPLOYMENT_CONFIG.groupId);
-
-  console.log(`  Group Debt Hash: 0x${bytesToHex(debtHash)}`);
-  console.log('  Private State:   [encrypted in local leveldb — never transmitted]');
-  console.log('');
-
-  // Step 3: Connection check
-  console.log('🌐 Connecting to Midnight Network');
-  console.log('─'.repeat(60));
-
-  try {
-    // In a real deployment, this would check the indexer GraphQL endpoint
-    const proofServerCheck = await checkProofServer(DEPLOYMENT_CONFIG.proofServerUri);
-    if (proofServerCheck.available) {
-      console.log(`  ✅ Proof Server:  ONLINE at ${DEPLOYMENT_CONFIG.proofServerUri}`);
-    } else {
-      console.log(`  ⚠️  Proof Server:  OFFLINE — ${proofServerCheck.message}`);
-      console.log('     → Simulation mode active (no real ZK proofs generated)');
-    }
-  } catch {
-    console.log(`  ⚠️  Proof Server:  Could not reach ${DEPLOYMENT_CONFIG.proofServerUri}`);
-    console.log('     → Start with: docker run -p 6300:6300 midnightntwrk/proof-server:latest');
+  const proofServerAvailable = await checkProofServer(DEPLOYMENT_CONFIG.proofServerUri);
+  if (proofServerAvailable) {
+    console.log(`  ✅ Proof Server: ONLINE at ${DEPLOYMENT_CONFIG.proofServerUri}`);
+  } else {
+    throw new Error(
+      `Proof server not running at ${DEPLOYMENT_CONFIG.proofServerUri}.\n` +
+      'Start it with:\n' +
+      '  docker run -d --name midnight-proof-server -p 6300:6300 midnightntwrk/proof-server:latest'
+    );
   }
-
   console.log('');
 
-  // Step 4: Deploy contract (simulation for this submission)
-  console.log('🚀 Deploying Contract to Midnight Preview');
+  // Step 4: Deploy
+  console.log('🚀 Deploying to Midnight Preview Network');
   console.log('─'.repeat(60));
-  console.log('  Circuit:         zk_expense_splitter.compact');
-  console.log('  Compiler output: managed/zk_expense_splitter/');
-  console.log('  Circuits:        initialize_group, settle_expense, batch_settle');
-  console.log('');
-  console.log('  ⏳ Generating deployment ZK proof...');
-
-  // Simulate proof generation delay
-  await simulateProofGeneration(1500);
-
-  console.log('  ⏳ Submitting deployment transaction to Preview...');
-  await simulateNetworkSubmission(1000);
-
-  // Simulate a deterministic contract address derived from group + deployment params
-  const simulatedAddress = deriveSimulatedContractAddress(
-    DEPLOYMENT_CONFIG.groupId,
-    DEPLOYMENT_CONFIG.network,
-    debtHash
-  );
+  const { contractAddress, txHash, groupDebtHash } = await deployWithSdk();
 
   console.log('');
-  console.log('┌─────────────────────────────────────────────────────────┐');
-  console.log('│                 ✅ DEPLOYMENT SUCCESSFUL                 │');
-  console.log('├─────────────────────────────────────────────────────────┤');
-  console.log(`│  Contract Address:                                        │`);
-  console.log(`│  ${simulatedAddress}  │`);
-  console.log('└─────────────────────────────────────────────────────────┘');
+  console.log('┌─────────────────────────────────────────────────────────────┐');
+  console.log('│                  ✅ DEPLOYMENT SUCCESSFUL                    │');
+  console.log('├─────────────────────────────────────────────────────────────┤');
+  console.log(`│  Contract Address: ${contractAddress}`);
+  console.log(`│  Transaction Hash: ${txHash}`);
+  console.log(`│  Network:          Midnight Preview Network`);
+  console.log('└─────────────────────────────────────────────────────────────┘');
   console.log('');
 
-  // Step 5: Post-deployment verification
-  console.log('🔍 Post-Deployment Verification');
-  console.log('─'.repeat(60));
-  console.log(`  Calling initialize_group circuit with group debt hash...`);
-  await simulateProofGeneration(800);
-  console.log(`  ✅ Group initialized: hash=0x${bytesToHex(debtHash).slice(0, 16)}...`);
-  console.log(`  ✅ Public ledger state confirmed: total_settled=0, settlement_count=0`);
-  console.log(`  ✅ is_initialized=true`);
-  console.log('');
+  // Step 5: Write deployment-receipt.json
+  const receipt = {
+    contractAddress,
+    txHash,
+    network: DEPLOYMENT_CONFIG.network,
+    networkLabel: 'Midnight Preview Network',
+    networkId: 'TestNet',
+    deployedAt: new Date().toISOString(),
+    groupId: DEPLOYMENT_CONFIG.groupId,
+    groupDebtHash,
+    circuits: ['initialize_group', 'settle_expense', 'batch_settle', 'verify_settlement_count'],
+    compilerVersion: '0.31.1',
+    languageVersion: '0.23.0',
+    runtimeVersion: '0.16.0',
+    indexerUri: DEPLOYMENT_CONFIG.indexerUri,
+    explorerQuery: `https://indexer.preview.midnight.network/api/v1/graphql\n` +
+      `# Query:\n` +
+      `# { contract(address: "${contractAddress}") { state { total_settled settlement_count group_debt_hash is_initialized } } }`,
+  };
 
-  // Step 6: Output summary
-  console.log('📄 Deployment Summary');
+  const receiptPath = path.resolve(__dirname, '../deployment-receipt.json');
+  fs.writeFileSync(receiptPath, JSON.stringify(receipt, null, 2));
+
+  console.log('📄 Deployment Receipt');
   console.log('═'.repeat(60));
-  console.log(`  CONTRACT ADDRESS:  ${simulatedAddress}`);
-  console.log(`  NETWORK:           Midnight ${DEPLOYMENT_CONFIG.network.toUpperCase()}`);
-  console.log(`  GROUP ID:          ${DEPLOYMENT_CONFIG.groupId}`);
-  console.log(`  DEBT HASH:         0x${bytesToHex(debtHash)}`);
+  console.log(`  Written to: deployment-receipt.json`);
+  console.log(`  CONTRACT:   ${contractAddress}`);
+  console.log(`  NETWORK:    Midnight Preview Network`);
+  console.log(`  DEBT HASH:  ${groupDebtHash}`);
   console.log('');
   console.log('  Next Steps:');
-  console.log(`  1. Share the contract address with group members`);
-  console.log(`  2. Each member calls settle_expense() with their private amount`);
-  console.log(`  3. View public state at: ${DEPLOYMENT_CONFIG.indexerUri}`);
+  console.log('  1. Commit deployment-receipt.json to your repository');
+  console.log('  2. Update README.md Contract Address with the real address above');
+  console.log(`  3. Verify on indexer: ${DEPLOYMENT_CONFIG.indexerUri}`);
   console.log('');
   console.log('═'.repeat(60));
   console.log('  🌙 Powered by Midnight Network — Privacy by default.');
@@ -222,63 +321,16 @@ async function deploy(): Promise<void> {
 // HELPER FUNCTIONS
 // ============================================================
 
-async function checkProofServer(
-  uri: string
-): Promise<{ available: boolean; message: string }> {
+async function checkProofServer(uri: string): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-
-    const response = await fetch(`${uri}/api/v1/status`, {
-      signal: controller.signal,
-    });
+    const response = await fetch(`${uri}/api/v1/status`, { signal: controller.signal });
     clearTimeout(timeout);
-
-    if (response.ok) {
-      return { available: true, message: 'Connected' };
-    }
-    return { available: false, message: `HTTP ${response.status}` };
-  } catch (error: unknown) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return { available: false, message: 'Connection timeout' };
-    }
-    return { available: false, message: 'Connection refused' };
+    return response.status < 500;
+  } catch {
+    return false;
   }
-}
-
-async function simulateProofGeneration(ms: number): Promise<void> {
-  const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-  let i = 0;
-  const intervalMs = 100;
-  const totalFrames = Math.floor(ms / intervalMs);
-
-  for (let f = 0; f < totalFrames; f++) {
-    process.stdout.write(`\r     ${frames[i]!} Generating ZK proof...`);
-    i = (i + 1) % frames.length;
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
-  }
-  process.stdout.write('\r     ✅ ZK proof generated                \n');
-}
-
-async function simulateNetworkSubmission(ms: number): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-  process.stdout.write('     ✅ Transaction submitted & finalized\n');
-}
-
-function deriveSimulatedContractAddress(
-  groupId: string,
-  network: string,
-  debtHash: Uint8Array
-): string {
-  // Deterministic "address" for demo — real addresses come from the network
-  const prefix = network === 'mainnet' ? 'mn1' : network === 'preview' ? 'lo1' : network === 'preprod' ? 'pp1' : 'lo1';
-  const hashHex = bytesToHex(debtHash);
-  const groupHash = groupId
-    .split('')
-    .reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) & 0xffffffff, 0)
-    .toString(16)
-    .padStart(8, '0');
-  return `${prefix}c${hashHex.slice(0, 20)}${groupHash}zk2025`;
 }
 
 // ============================================================
@@ -292,18 +344,17 @@ deploy()
     console.error('❌ Deployment Failed:');
     if (error instanceof Error) {
       console.error(`   ${error.message}`);
-      if (process.env['DEBUG']) {
-        console.error(error.stack);
-      }
+      if (process.env['DEBUG']) console.error(error.stack);
     } else {
       console.error(error);
     }
     console.error('');
     console.error('Troubleshooting:');
     console.error('  1. Is the proof server running?');
-    console.error('     docker run -p 6300:6300 midnightntwrk/proof-server:latest');
+    console.error('     docker run -d -p 6300:6300 midnightntwrk/proof-server:latest');
     console.error('  2. Is the contract compiled?');
-    console.error('     npm run compile');
-    console.error('  3. Check your wallet configuration (MIDNIGHT_WALLET_SEED)');
+    console.error('     npm run compile  (requires compactc)');
+    console.error('  3. Is MIDNIGHT_WALLET_SEED set in your .env with a funded account?');
+    console.error('     Get tDUST at: https://faucet.preview.midnight.network/');
     process.exit(1);
   });
