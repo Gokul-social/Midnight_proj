@@ -14,7 +14,8 @@
     "deploy": "ts-node src/deploy.ts",
     "build": "tsc --project tsconfig.json",
     "lint": "tsc --noEmit",
-    "ci": "npm run lint && npm test"
+    "ci": "npm run lint && npm test",
+    "postinstall": "node scripts/patch-cjs.js"
   },
   "keywords": [
     "midnight",
