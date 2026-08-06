@@ -1,0 +1,64 @@
+{
+  "_note": "This file documents the deployment of the ZK Expense Splitter contract on Midnight Preview Network. Run `npm run deploy` with MIDNIGHT_WALLET_SEED set to populate real values.",
+  "_status": "PENDING — contract address will be populated after running: npm run deploy",
+  "contractAddress": "PENDING — run: npm run deploy",
+  "txHash": "PENDING",
+  "network": "preview",
+  "networkLabel": "Midnight Preview Network",
+  "networkId": "TestNet",
+  "deployedAt": "PENDING",
+  "groupId": "zk-expense-splitter-preview",
+  "groupDebtHash": "PENDING",
+  "circuits": [
+    "initialize_group",
+    "settle_expense",
+    "batch_settle",
+    "verify_settlement_count"
+  ],
+  "compilerVersion": "0.31.1",
+  "languageVersion": "0.23.0",
+  "runtimeVersion": "0.16.0",
+  "indexerUri": "https://indexer.preview.midnight.network/api/v1/graphql",
+  "compiledArtifacts": {
+    "settle_expense.pk": {
+      "sizeBytes": 151348,
+      "md5": "657e0f7656ab0c2f31f19dc218eefa33",
+      "format": "midnight:prover-key[v7](ir-source[v2])"
+    },
+    "settle_expense.vk": {
+      "sizeBytes": 1351,
+      "md5": "1090ae6bf46b6b68c3515f721b7757b0",
+      "format": "midnight:verifier-key[v6]"
+    },
+    "batch_settle.pk": {
+      "sizeBytes": 283792,
+      "md5": "aae2082d434c162ef09e00f48b786af2",
+      "format": "midnight:prover-key[v7](ir-source[v2])"
+    },
+    "batch_settle.vk": {
+      "sizeBytes": 1351,
+      "md5": "d10da2517eaa378c74c0bf3c867efb86",
+      "format": "midnight:verifier-key[v6]"
+    },
+    "initialize_group.pk": {
+      "sizeBytes": 147025,
+      "md5": "8f5e578ba98cb837c4a72fee1b8397a3",
+      "format": "midnight:prover-key[v7](ir-source[v2])"
+    },
+    "initialize_group.vk": {
+      "sizeBytes": 1351,
+      "md5": "34a982883eb5e822c46c0bb5255203af",
+      "format": "midnight:verifier-key[v6]"
+    },
+    "verify_settlement_count.pk": {
+      "sizeBytes": 41546,
+      "md5": "6c14e6e7ed61e2de4717e888b6d0dde8",
+      "format": "midnight:prover-key[v7](ir-source[v2])"
+    },
+    "verify_settlement_count.vk": {
+      "sizeBytes": 1351,
+      "md5": "4d1205bcdc654e56cc920e03c5365d78",
+      "format": "midnight:verifier-key[v6]"
+    }
+  }
+}

@@ -42,22 +42,90 @@ This repository represents a full submission for the **Midnight Network Builder 
 
 ---
 
-## Live Deployment Specifications
+## Compiled Circuit Artifacts
 
-Per organizer guidelines, the contract is deployed and verified on the stable **Midnight Preview Network**.
+The Compact contract has been compiled by the `compactc` toolchain (v0.31.1). The resulting binary circuit artifacts are committed to this repository in `managed/` and verified by their checksums below.
+
+### Proving & Verification Keys — `managed/zk_expense_splitter/keys/`
+
+| Artifact | Size | MD5 Checksum | Binary Header |
+| :--- | ---: | :--- | :--- |
+| `settle_expense.pk` | 147.8 KB | `657e0f7656ab0c2f31f19dc218eefa33` | `midnight:prover-key[v7](ir-source[v2])` |
+| `settle_expense.vk` | 1.3 KB | `1090ae6bf46b6b68c3515f721b7757b0` | `midnight:verifier-key[v6]` |
+| `batch_settle.pk` | 277.1 KB | `aae2082d434c162ef09e00f48b786af2` | `midnight:prover-key[v7](ir-source[v2])` |
+| `batch_settle.vk` | 1.3 KB | `d10da2517eaa378c74c0bf3c867efb86` | `midnight:verifier-key[v6]` |
+| `initialize_group.pk` | 143.6 KB | `8f5e578ba98cb837c4a72fee1b8397a3` | `midnight:prover-key[v7](ir-source[v2])` |
+| `initialize_group.vk` | 1.3 KB | `34a982883eb5e822c46c0bb5255203af` | `midnight:verifier-key[v6]` |
+| `verify_settlement_count.pk` | 40.6 KB | `6c14e6e7ed61e2de4717e888b6d0dde8` | `midnight:prover-key[v7](ir-source[v2])` |
+| `verify_settlement_count.vk` | 1.3 KB | `4d1205bcdc654e56cc920e03c5365d78` | `midnight:verifier-key[v6]` |
+
+Verify locally:
+```bash
+md5 managed/zk_expense_splitter/keys/*.pk managed/zk_expense_splitter/keys/*.vk
+# or on Linux:
+md5sum managed/zk_expense_splitter/keys/*.pk managed/zk_expense_splitter/keys/*.vk
+```
+
+### Compiler Metadata — `managed/compiler/contract-info.json`
+
+The compiler output records all 4 exported circuits, their argument types, and the 4 public ledger fields:
+
+```json
+{
+  "compiler-version": "0.31.1",
+  "language-version": "0.23.0",
+  "runtime-version": "0.16.0",
+  "circuits": [
+    { "name": "initialize_group", "pure": false, "proof": true },
+    { "name": "settle_expense",   "pure": false, "proof": true },
+    { "name": "batch_settle",     "pure": false, "proof": true },
+    { "name": "verify_settlement_count", "pure": false, "proof": true }
+  ],
+  "ledger": [
+    { "name": "total_settled",    "exported": true, "storage": "Cell" },
+    { "name": "settlement_count", "exported": true, "storage": "Cell" },
+    { "name": "group_debt_hash",  "exported": true, "storage": "Cell" },
+    { "name": "is_initialized",   "exported": true, "storage": "Cell" }
+  ]
+}
+```
+
+---
+
+## Network Deployment
+
+The contract is deployed to **Midnight Preview Network** using the real Midnight SDK (`@midnight-ntwrk/midnight-js-contracts`). The on-chain address is recorded in [`deployment-receipt.json`](deployment-receipt.json) after running `npm run deploy`.
 
 | Attribute | Specification |
 | :--- | :--- |
-| **Contract Address** | `lo1c7a6b2d657870656e73654d2fe2b3zk2025` |
-| **Network** | Midnight Preview Network |
-| **Deployment Status** | Active and Initialized (`is_initialized = true`) |
+| **Network** | Midnight Preview Network (`TestNet`) |
+| **Contract Address** | See [`deployment-receipt.json`](deployment-receipt.json) |
 | **Group Identifier** | `zk-expense-splitter-preview` |
-| **Group Debt Hash** | `0x7a6b2d657870656e73652d73706c69747465722d707265766965770000000000` |
 | **Deployed Circuits** | `initialize_group`, `settle_expense`, `batch_settle`, `verify_settlement_count` |
 | **GraphQL Indexer** | `https://indexer.preview.midnight.network/api/v1/graphql` |
 | **RPC Endpoint** | `https://rpc.preview.midnight.network` |
 | **Frontend Application** | [https://midnight-proj-two.vercel.app](https://midnight-proj-two.vercel.app) |
 | **CI/CD Pipeline** | GitHub Actions Automated Build & Test Suite |
+
+### How to Deploy
+
+```bash
+# 1. Install compactc and compile the contract
+npm run compile
+
+# 2. Start the Midnight Proof Server
+docker run -d --name midnight-proof-server -p 6300:6300 midnightntwrk/proof-server:latest
+
+# 3. Set your wallet seed in .env
+cp .env.example .env
+# Edit .env and set MIDNIGHT_WALLET_SEED to your 24-word mnemonic
+# Get tDUST at: https://faucet.preview.midnight.network/
+
+# 4. Deploy — writes real address to deployment-receipt.json
+npm run deploy
+```
+
+The deploy script uses `deployContract()` from `@midnight-ntwrk/midnight-js-contracts`, submits a real transaction, and writes the canonical contract address (assigned by the network) to `deployment-receipt.json`.
 
 ---
 
@@ -123,7 +191,7 @@ flowchart TB
     end
 
     subgraph Network ["Midnight Preview Network"]
-        Contract["Compact Smart Contract\nlo1c7a6b...zk2025"]
+        Contract["Compact Smart Contract\n(address in deployment-receipt.json)"]
         Indexer["GraphQL Indexer Service"]
     end
 
@@ -200,15 +268,17 @@ total_settled = disclose(new_total as Uint<128>);
 
 ## Verification & Indexer Integration
 
-The deployed contract state can be independently queried and verified on the Midnight Preview Network via GraphQL.
+Once deployed, the contract state can be independently queried and verified on the Midnight Preview Network via the public GraphQL indexer.
 
-### Indexer Query Example
+### Indexer Query
 
 **GraphQL Endpoint:** `https://indexer.preview.midnight.network/api/v1/graphql`
 
+Replace `<CONTRACT_ADDRESS>` with the address from [`deployment-receipt.json`](deployment-receipt.json):
+
 ```graphql
 query GetContractState {
-  contract(address: "lo1c7a6b2d657870656e73654d2fe2b3zk2025") {
+  contract(address: "<CONTRACT_ADDRESS>") {
     address
     state {
       total_settled
@@ -220,23 +290,25 @@ query GetContractState {
 }
 ```
 
-### Verified On-Chain Response
+### Expected On-Chain Response (after deployment + initialize_group())
 
 ```json
 {
   "data": {
     "contract": {
-      "address": "lo1c7a6b2d657870656e73654d2fe2b3zk2025",
+      "address": "<CONTRACT_ADDRESS>",
       "state": {
-        "total_settled": "4750000",
-        "settlement_count": "12",
-        "group_debt_hash": "0x7a6b2d657870656e73652d73706c69747465722d707265766965770000000000",
+        "total_settled": "0",
+        "settlement_count": "0",
+        "group_debt_hash": "<derived from GROUP_ID>",
         "is_initialized": true
       }
     }
   }
 }
 ```
+
+The real contract address is written to `deployment-receipt.json` by `npm run deploy` using the Midnight SDK's `deployContract()` API.
 
 ---
 
@@ -290,36 +362,54 @@ Navigate to `http://localhost:5173` in your browser. Ensure your Lace wallet ext
 zk-expense-splitter/
 ├── contract/
 │   └── src/
-│       └── zk_expense_splitter.compact     # Compact smart contract source code
-├── managed/                                 # Compiled ZK circuit artifacts
-│   ├── keys/                                # .prover and .verifier binary key pairs
-│   ├── zkir/                                # Binary and text ZKIR circuit representations
-│   └── contract/                            # Generated TypeScript bindings
-├── frontend/                                # React 18 + Vite + TypeScript web application
+│       └── zk_expense_splitter.compact        # Compact smart contract source code
+├── managed/                                    # Compiled ZK circuit artifacts (compactc output)
+│   ├── zk_expense_splitter/
+│   │   ├── keys/                               # Real binary proving & verification keys
+│   │   │   ├── settle_expense.pk              # 147.8 KB — midnight:prover-key[v7]
+│   │   │   ├── settle_expense.vk              # 1.3 KB  — midnight:verifier-key[v6]
+│   │   │   ├── batch_settle.pk                # 277.1 KB — midnight:prover-key[v7]
+│   │   │   ├── batch_settle.vk                # 1.3 KB  — midnight:verifier-key[v6]
+│   │   │   ├── initialize_group.pk            # 143.6 KB — midnight:prover-key[v7]
+│   │   │   ├── initialize_group.vk            # 1.3 KB  — midnight:verifier-key[v6]
+│   │   │   ├── verify_settlement_count.pk     # 40.6 KB  — midnight:prover-key[v7]
+│   │   │   └── verify_settlement_count.vk     # 1.3 KB  — midnight:verifier-key[v6]
+│   │   ├── contract/
+│   │   │   ├── index.cjs                      # CommonJS contract module (SDK interface)
+│   │   │   └── index.d.ts                     # TypeScript type declarations
+│   │   └── witnesses/
+│   │       └── index.cjs                      # Witness interface module
+│   ├── zkir/                                   # ZK intermediate representation
+│   │   ├── *.zkir                             # Human-readable circuit IR (JSON)
+│   │   └── *.bzkir                            # Binary circuit IR
+│   └── compiler/
+│       └── contract-info.json                 # Compiler metadata (circuits, ledger, witnesses)
+├── frontend/                                   # React 18 + Vite + TypeScript web application
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ExpenseDashboard.tsx         # Public ledger state display
-│   │   │   ├── SettleExpenseForm.tsx        # Private witness input & ZK proof generation
-│   │   │   ├── PrivacyClaim.tsx             # Selective disclosure visualizer
-│   │   │   ├── PrivacyLog.tsx              # Real-time privacy audit log
-│   │   │   └── ExplorerLinks.tsx           # Midnight transaction scanner integration
-│   │   ├── context/AppContext.tsx           # Lace wallet connector & ZK state machine
+│   │   │   ├── ExpenseDashboard.tsx           # Public ledger state display
+│   │   │   ├── SettleExpenseForm.tsx          # Private witness input & ZK proof generation
+│   │   │   ├── PrivacyClaim.tsx               # Selective disclosure visualizer
+│   │   │   ├── PrivacyLog.tsx                 # Real-time privacy audit log
+│   │   │   └── ExplorerLinks.tsx              # Midnight transaction scanner integration
+│   │   ├── context/AppContext.tsx             # Lace wallet connector & ZK state machine
 │   │   └── lib/
-│   │       ├── config.ts                    # Preview network addresses & endpoints
-│   │       └── wallet.ts                    # DApp connector detection utilities
-│   ├── vite.config.ts                       # Vite dev proxy configuration (:6300 CORS proxy)
-│   └── vercel.json                          # Production deployment routing configuration
-├── Public/                                  # Application screenshots & media assets
+│   │       ├── config.ts                      # Preview network addresses & endpoints
+│   │       └── wallet.ts                      # DApp connector detection utilities
+│   ├── vite.config.ts                         # Vite dev proxy configuration (:6300 CORS proxy)
+│   └── vercel.json                            # Production deployment routing configuration
+├── Public/                                     # Application screenshots & media assets
 ├── src/
-│   ├── deploy.ts                            # Midnight Preview deployment script
-│   ├── witnesses.ts                         # Client-side witness implementations
-│   └── utils.ts                             # Network utilities and ledger helpers
+│   ├── deploy.ts                              # Real Midnight SDK deployment script
+│   ├── witnesses.ts                           # Client-side witness implementations
+│   └── utils.ts                               # Network utilities and ledger helpers
 ├── tests/
-│   └── expense_splitter.test.ts             # 34-test Jest automated integration suite
-├── .github/workflows/ci.yml                # Automated CI build & verification workflow
-├── package.json                             # Node.js project dependencies & build scripts
-├── PROPOSAL.md                              # Level 3 Formalized Product Proposal
-└── README.md                                # Repository documentation
+│   └── expense_splitter.test.ts              # 34-test Jest automated integration suite
+├── deployment-receipt.json                    # On-chain deployment record (address + checksums)
+├── .github/workflows/ci.yml                  # Automated CI build & verification workflow
+├── package.json                               # Node.js project dependencies & build scripts
+├── PROPOSAL.md                                # Level 3 Formalized Product Proposal
+└── README.md                                  # Repository documentation
 ```
 
 ---
