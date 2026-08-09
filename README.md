@@ -99,7 +99,7 @@ The contract is deployed to **Midnight Preview Network** using the real Midnight
 | Attribute | Specification |
 | :--- | :--- |
 | **Network** | Midnight Preview Network (`TestNet`) |
-| **Contract Address** | See [`deployment-receipt.json`](deployment-receipt.json) |
+| **Contract Address** | `02a8b4cc52da38640550b4e8898725ea6ff6e12c86278a4bb470358ebf524634` (Preview Network) |
 | **Group Identifier** | `zk-expense-splitter-preview` |
 | **Deployed Circuits** | `initialize_group`, `settle_expense`, `batch_settle`, `verify_settlement_count` |
 | **GraphQL Indexer** | `https://indexer.preview.midnight.network/api/v1/graphql` |

@@ -44,9 +44,10 @@ jobs:
       - name: Install backend dependencies
         run: npm ci
 
-      # Note: compactc is not available in CI without the Midnight toolchain
-      # installed. The managed/ directory contains pre-compiled output from
-      # local compilation. This step validates the stubs are present.
+      # Compile the Compact contract directly instead of relying on pre-compiled artifacts
+      - name: Compile Compact contract
+        run: npm run compile
+
       - name: Verify compiled contract artifacts
         run: |
           echo "🔍 Checking managed/ directory for compiled contract..."
