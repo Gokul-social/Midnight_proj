@@ -3,6 +3,9 @@
   <p>
     <strong>A Production-Grade, Privacy-Preserving Group Expense Splitting Application Built on the Midnight Network Using Compact Smart Contracts and Zero-Knowledge Proofs.</strong>
   </p>
+  <p>
+    <strong>Deployed Contract Address (Preview):</strong> <code>02a8b4cc52da38640550b4e8898725ea6ff6e12c86278a4bb470358ebf524634</code>
+  </p>
 
   <p>
     <a href="https://midnight-proj-two.vercel.app"><img src="https://img.shields.io/badge/LIVE_APP-midnight--proj--two.vercel.app-blue?style=for-the-badge" alt="Live App" /></a>
