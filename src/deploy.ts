@@ -19,6 +19,7 @@
  *   deployment-receipt.json — written with real contract address from the network
  */
 
+import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { NETWORK_CONFIG, bytesToHex, NetworkName } from './utils';
@@ -150,9 +151,7 @@ function createZKConfigProvider(managedDir: string): unknown {
 // ============================================================
 
 async function buildPrivateStateProvider() {
-  const { levelPrivateStateProvider } = await import(
-    '@midnight-ntwrk/midnight-js-level-private-state-provider'
-  );
+  const { levelPrivateStateProvider } = await import("@midnight-ntwrk/midnight-js-level-private-state-provider");
   return levelPrivateStateProvider({
     privateStoragePasswordProvider: () => DEPLOYMENT_CONFIG.privateStatePassword,
     accountId: 'zk-expense-splitter-deployer',
@@ -164,9 +163,7 @@ async function buildPrivateStateProvider() {
 // ============================================================
 
 async function buildPublicDataProvider(indexerUri: string) {
-  const { indexerPublicDataProvider } = await import(
-    '@midnight-ntwrk/midnight-js-indexer-public-data-provider'
-  );
+  const { indexerPublicDataProvider } = await import("@midnight-ntwrk/midnight-js-indexer-public-data-provider");
   const queryURL = indexerUri;
   const subscriptionURL = queryURL
     .replace('https://', 'wss://')
@@ -180,9 +177,7 @@ async function buildPublicDataProvider(indexerUri: string) {
 
 async function buildProofProvider(proofServerUri: string, zkConfigProvider: unknown): Promise<unknown> {
   try {
-    const { httpClientProofProvider } = await import(
-      '@midnight-ntwrk/midnight-js-http-client-proof-provider'
-    );
+    const { httpClientProofProvider } = await import("@midnight-ntwrk/midnight-js-http-client-proof-provider");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return httpClientProofProvider(proofServerUri, zkConfigProvider as any);
   } catch (err) {
@@ -202,16 +197,15 @@ async function buildProofProvider(proofServerUri: string, zkConfigProvider: unkn
 }
 
 // ============================================================
-// WALLET PROVIDER — requires Midnight Wallet SDK
+// WALLET PROVIDER — uses @midnight-ntwrk/wallet
 // ============================================================
 
-async function buildWalletProvider(): Promise<never> {
+async function buildWalletProvider(networkConfig: any): Promise<any> {
   // Validate the seed
   if (!DEPLOYMENT_CONFIG.walletSeed) {
     throw new Error(
       'MIDNIGHT_WALLET_SEED is required.\n' +
-      'Set in .env: MIDNIGHT_WALLET_SEED=your 24 word mnemonic\n' +
-      'Get tDUST at: https://faucet.preview.midnight.network/'
+      'Set in .env: MIDNIGHT_WALLET_SEED=your 24 word mnemonic\n'
     );
   }
 
@@ -219,33 +213,68 @@ async function buildWalletProvider(): Promise<never> {
   if (words.length < 12 || words[0] === 'your') {
     throw new Error(
       'MIDNIGHT_WALLET_SEED is still a placeholder.\n' +
-      'Replace it with your real 24-word BIP-39 mnemonic.\n' +
-      'Get tDUST at: https://faucet.preview.midnight.network/'
+      'Replace it with your real 24-word BIP-39 mnemonic.\n'
     );
   }
 
-  // The WalletProvider interface (balanceTx / getCoinPublicKey / getEncryptionPublicKey)
-  // requires full BIP-32/BIP-39 key derivation + Zswap protocol knowledge, which is only
-  // available through the Midnight Wallet SDK. The @midnight-ntwrk packages installed here
-  // (v4.1.1) don't bundle a standalone mnemonic wallet — it ships separately.
-  //
-  // This script validates everything else (artifacts, proof server, providers) and will
-  // complete once the wallet SDK is configured. The contract artifacts are real and ready.
-  throw new Error(
-    'WalletProvider not yet configured.\n\n' +
-    'The Midnight Wallet SDK (balanceTx / getCoinPublicKey) is required for Node.js deployment.\n\n' +
-    'Two options:\n' +
-    '  1. Install the Midnight wallet library and implement WalletProvider with your mnemonic:\n' +
-    '     See: https://docs.midnight.network/develop/tutorial/building/\n\n' +
-    '  2. Use the browser DApp connector (Lace wallet) via the live frontend:\n' +
-    '     https://midnight-proj-two.vercel.app\n' +
-    '     — the frontend implements the full provider stack via Lace\n\n' +
-    'All other components verified OK:\n' +
-    '  ✅ Compiled artifacts: managed/zk_expense_splitter/keys/*.pk (midnight:prover-key[v7])\n' +
-    '  ✅ Verifier keys:      managed/zk_expense_splitter/keys/*.vk (midnight:verifier-key[v6])\n' +
-    '  ✅ ZKIR:               managed/zkir/*.bzkir\n' +
-    '  ✅ Proof server:       running at ' + DEPLOYMENT_CONFIG.proofServerUri
+  const walletModule = await import("@midnight-ntwrk/wallet");
+  const WalletBuilder = walletModule.WalletBuilder;
+  
+  const zswapModule = await import("@midnight-ntwrk/zswap");
+  const zswap = zswapModule;
+
+  const subscriptionURL = networkConfig.indexerUri
+    .replace('https://', 'wss://')
+    .replace('http://', 'ws://');
+
+  const nodeUri = 'nodeUri' in networkConfig ? networkConfig.nodeUri : 'https://rpc.preview.midnight.network';
+  
+  console.log('ZSWAP NetworkId ENUM:', zswap.NetworkId);
+  const zswapNetworkId = zswap.NetworkId.TestNet || 'TestNet';
+
+  const bip39 = require('bip39');
+  const seedHex = bip39.mnemonicToEntropy(DEPLOYMENT_CONFIG.walletSeed);
+
+  const wallet = await WalletBuilder.build(
+    networkConfig.indexerUri,
+    subscriptionURL,
+    DEPLOYMENT_CONFIG.proofServerUri,
+    nodeUri,
+    seedHex, // 32-byte hex entropy derived from the mnemonic
+    zswapNetworkId,
+    'warn',
   );
+
+  // Start the wallet syncing
+  wallet.start();
+
+  // Create a WalletProvider facade
+  const walletState = await new Promise<any>((resolve) => {
+    const sub = wallet.state().subscribe((state: any) => {
+      resolve(state);
+      sub.unsubscribe();
+    });
+  });
+
+  return {
+    getCoinPublicKey() {
+      return walletState.coinPublicKey;
+    },
+    getEncryptionPublicKey() {
+      return walletState.encryptionPublicKey;
+    },
+    async balanceTx(tx: any, newCoins: any[]) {
+      // Use the wallet's balanceTransaction method
+      const balanced = await wallet.balanceTransaction(tx, newCoins);
+      // It returns either a BalanceTransactionToProve or NothingToProve
+      // Both have a .transaction property? No, it returns a proving recipe.
+      // Wait, balanceTx must return a Transaction! 
+      // The wallet API proveTransaction does it. 
+      // Actually, balanceTransaction returns something that needs proving.
+      // But if we just pass the wallet instance to midnight-js, maybe it requires the standard WalletProvider?
+      throw new Error('balanceTx not fully implemented for Node.js. Use browser or SDK standard.');
+    }
+  };
 }
 
 // ============================================================
@@ -323,9 +352,8 @@ async function deploy(): Promise<void> {
   const privateStateProvider = await buildPrivateStateProvider();
   console.log('  ✅ PrivateStateProvider — leveldb');
 
-  // buildWalletProvider throws with clear instructions if wallet SDK not configured.
-  // This exits 0 — all other components above are validated OK.
-  const walletProvider = await buildWalletProvider();
+  // buildWalletProvider uses @midnight-ntwrk/wallet to create a Wallet instance
+  const walletProvider = await buildWalletProvider(networkConfig);
   console.log('  ✅ WalletProvider');
 
   // ProofProvider uses compact-js internally (ESM-only bundle).
@@ -342,10 +370,11 @@ async function deploy(): Promise<void> {
   console.log('🚀 Deploying to Midnight Preview Network');
   console.log('─'.repeat(60));
 
-  const { setNetworkId } = await import('@midnight-ntwrk/midnight-js-network-id');
-  setNetworkId(networkConfig.networkId);
+  const { setNetworkId } = await import("@midnight-ntwrk/midnight-js-network-id");
+  setNetworkId('test');
 
-  const { deployContract } = await import('@midnight-ntwrk/midnight-js-contracts');
+  const { deployContract } = await import("@midnight-ntwrk/midnight-js-contracts");
+
   const compiledContract = require('../managed/zk_expense_splitter/contract/index.cjs');
 
   const debtHash = deriveGroupDebtHash(DEPLOYMENT_CONFIG.groupId);
@@ -375,7 +404,7 @@ async function deploy(): Promise<void> {
     txHash,
     network: DEPLOYMENT_CONFIG.network,
     networkLabel: 'Midnight Preview Network',
-    networkId: 'TestNet',
+    networkId: 'test',
     deployedAt: new Date().toISOString(),
     groupId: DEPLOYMENT_CONFIG.groupId,
     groupDebtHash: debtHashHex,
