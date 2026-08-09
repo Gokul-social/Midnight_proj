@@ -5,6 +5,12 @@
   </p>
 
   <p>
+    <a href="https://midnight-proj-two.vercel.app"><img src="https://img.shields.io/badge/LIVE_APP-midnight--proj--two.vercel.app-blue?style=for-the-badge" alt="Live App" /></a>
+    <a href="https://explorer.preview.midnight.network"><img src="https://img.shields.io/badge/CONTRACT-Midnight_Explorer-4edea2?style=for-the-badge" alt="Contract" /></a>
+    <a href="https://midnight-proj-two.vercel.app/metrics"><img src="https://img.shields.io/badge/METRICS-Live_Dashboard-f59e0b?style=for-the-badge" alt="Metrics" /></a>
+  </p>
+
+  <p>
     <a href="https://github.com/Gokul-social/Midnight_proj/actions/workflows/ci.yml"><img src="https://github.com/Gokul-social/Midnight_proj/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
     <img src="https://img.shields.io/badge/Network-MIDNIGHT_PREVIEW-0000FF?style=for-the-badge" alt="Midnight Preview Network" />
     <img src="https://img.shields.io/badge/Language-Compact_v0.31.1-4F46E5?style=for-the-badge" alt="Compact Language" />
