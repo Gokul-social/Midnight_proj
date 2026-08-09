@@ -35,9 +35,18 @@ This repository represents a full submission for the **Midnight Network Builder 
 
 ---
 
+## Demo Video
+
+> [**Watch the full demo walkthrough →**](https://drive.google.com/file/d/1G42DW8pqK2UNl9Ekc-MAoB0h4riuLmND/view?usp=sharing)
+>
+> Covers: Wallet connection · Proof generation · Smart contract interaction · Event tracking
+
+---
+
 ## Table of Contents
 
 - [Executive Summary](#executive-summary)
+- [Demo Video](#demo-video)
 - [Live Deployment Specifications](#live-deployment-specifications)
 - [Application Screenshots](#application-screenshots)
 - [System Architecture & Sequence Flow](#system-architecture--sequence-flow)
