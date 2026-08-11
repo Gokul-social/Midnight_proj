@@ -39,7 +39,7 @@ This repository represents a full submission for the **Midnight Network Builder 
 
 > [**Watch the full demo walkthrough →**](https://drive.google.com/file/d/1G42DW8pqK2UNl9Ekc-MAoB0h4riuLmND/view?usp=sharing)
 >
-> Covers: Wallet connection · Proof generation · Smart contract interaction · Event tracking
+> Covers: Wallet connection · Proof generation · Smart contract interaction 
 
 ---
 
