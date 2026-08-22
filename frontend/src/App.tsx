@@ -4,12 +4,13 @@ import { ExpenseDashboard } from './components/ExpenseDashboard';
 import { SettleExpenseForm } from './components/SettleExpenseForm';
 import { PrivacyLog } from './components/PrivacyLog';
 import { PrivacyClaim } from './components/PrivacyClaim';
+import { NetworkStatus } from './components/NetworkStatus';
 
 // ────────────────────────────────────────────────────────────
 // Marquee bar
 // ────────────────────────────────────────────────────────────
 function MarqueeBar({ position }: { position: 'top' | 'bottom' }) {
-  const text = 'ZK EXPENSE SPLITTER — 34 TESTS PASSING — MIDNIGHT PREVIEW DEPLOYED — PRIVACY BY DEFAULT — ';
+  const text = 'ZK EXPENSE SPLITTER — 34 TESTS PASSING — MIDNIGHT PREPROD DEPLOYED — PRIVACY BY DEFAULT — LEVEL 4 MVP — ';
   const repeated = Array(6).fill(text).join('');
   return (
     <div
@@ -63,6 +64,15 @@ function Nav({ activeSection, setActiveSection }: {
           className="nav-link"
         >
           GITHUB
+        </a>
+        <a
+          href="https://x.com/ZKExpSplitter"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="nav-link"
+          title="Follow on X"
+        >
+          X / TWITTER
         </a>
         <a
           href="https://docs.midnight.network"
@@ -255,7 +265,7 @@ function LandingPage({ onLaunchApp }: { onLaunchApp: () => void }) {
           LAUNCH APP
         </button>
         <p className="font-mono text-[12px] text-white/30 uppercase tracking-[0.25em]">
-          MIDNIGHT BUILDER PROGRAM — LEVEL 1 + 2 + 3 SUBMISSION
+          MIDNIGHT BUILDER PROGRAM — LEVEL 1 + 2 + 3 + 4 SUBMISSION
         </p>
       </section>
 
@@ -453,12 +463,12 @@ function AppDashboard() {
         </section>
       )}
 
-      {/* App UI when connected */}
       {isConnected && (
         <div className="flex-1 px-4 md:px-8 py-10 space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3 space-y-6">
               <ExpenseDashboard />
+              <NetworkStatus />
               <PrivacyClaim />
               <PrivacyLog />
               {/* Transaction Scanner */}
