@@ -19,8 +19,8 @@
  * REQUIREMENTS FOR REAL INTEGRATION:
  *   - Lace wallet with Midnight support installed as a browser extension
  *   - Extension enabled on this domain (click the extension → enable)
- *   - Wallet set to "Preview" network (not Preprod)
- *   - tNIGHT tokens in the wallet (from https://faucet.preview.midnight.network/)
+ *   - Wallet set to "Preprod" network (not Preview or Mainnet)
+ *   - tNIGHT tokens in the wallet (from https://faucet.preprod-01.midnight.network/)
  *   - Docker proof server running locally: docker run -p 6300:6300 midnightntwrk/proof-server:latest
  *
  * Install guide: https://docs.midnight.network/develop/tutorial/using-the-dapp-connector/

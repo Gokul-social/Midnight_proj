@@ -5,20 +5,20 @@
  * Contract address and network URIs are injected from .env at build time
  * via Vite's import.meta.env mechanism (VITE_* prefix required).
  *
- * Deployed contract: lo1c7a6b2d657870656e73654d2fe2b3zk2025
- * Network: Midnight Preview (Stable — August 2026)
- * Faucet: https://faucet.preview.midnight.network/
+ * Network: Midnight Preprod (Level 4 — August 2026)
+ * Faucet:  https://faucet.preprod-01.midnight.network/
+ * Indexer: https://indexer.preprod-01.midnight.network/api/v1/graphql
  */
 
 /** The deployed contract address — sourced from VITE_CONTRACT_ADDRESS in .env */
 const CONTRACT_ADDRESS: string =
   (import.meta.env['VITE_CONTRACT_ADDRESS'] as string | undefined) ??
-  'lo1c7a6b2d657870656e73654d2fe2b3zk2025';
+  '02a8b4cc52da38640550b4e8898725ea6ff6e12c86278a4bb470358ebf524634';
 
-/** Indexer URI — Preview network (stable) */
+/** Indexer URI — Preprod network */
 const INDEXER_URI: string =
   (import.meta.env['VITE_INDEXER_URI'] as string | undefined) ??
-  'https://indexer.preview.midnight.network/api/v1/graphql';
+  'https://indexer.preprod-01.midnight.network/api/v1/graphql';
 
 /** Proof server URI — local Docker in dev, or env override */
 const PROOF_SERVER_URI: string =
@@ -26,23 +26,24 @@ const PROOF_SERVER_URI: string =
   'http://localhost:6300';
 
 export const CONTRACT_CONFIG = {
-  /** Deployed contract address on Midnight Preview — from VITE_CONTRACT_ADDRESS */
+  /** Deployed contract address on Midnight Preprod — from VITE_CONTRACT_ADDRESS */
   address: CONTRACT_ADDRESS,
 
   /** Network configuration */
   network: {
-    name: 'Preview' as const,
+    name: 'Preprod' as const,
     id: 'TestNet' as const,
     indexerUri: INDEXER_URI,
     proofServerUri: PROOF_SERVER_URI,
-    nodeUri: 'https://rpc.preview.midnight.network',
-    faucet: 'https://faucet.preview.midnight.network/',
+    nodeUri: 'https://rpc.preprod-01.midnight.network',
+    faucet: 'https://faucet.preprod-01.midnight.network/',
+    explorerBase: 'https://indexer.preprod-01.midnight.network/api/v1/graphql',
   },
 
   /** Contract metadata */
   contract: {
     name: 'zk_expense_splitter',
-    version: '1.0.0',
+    version: '1.4.0',
     circuits: {
       impure: ['initialize_group', 'settle_expense', 'batch_settle'] as const,
       pure: ['verify_settlement_count'] as const,
@@ -76,3 +77,10 @@ export const truncateAddress = (address: string, chars = 8): string => {
   if (address.length <= chars * 2 + 3) return address;
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
 };
+
+/** Build a Preprod indexer GraphQL query URL for a contract */
+export const buildIndexerQueryUrl = (contractAddress: string): string => {
+  const query = `{ contract(address: "${contractAddress}") { state { total_settled settlement_count group_debt_hash is_initialized } } }`;
+  return `${CONTRACT_CONFIG.network.explorerBase}?query=${encodeURIComponent(query)}`;
+};
+
