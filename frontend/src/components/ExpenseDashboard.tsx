@@ -1,5 +1,5 @@
 import { useApp } from '../context/AppContext';
-import { formatAmount, CONTRACT_CONFIG, truncateAddress } from '../lib/config';
+import { formatAmount, CONTRACT_CONFIG, truncateAddress, buildIndexerQueryUrl } from '../lib/config';
 
 export function ExpenseDashboard() {
   const { state, refreshLedger } = useApp();
@@ -26,15 +26,25 @@ export function ExpenseDashboard() {
           </span>
         </div>
         {isConnected && (
-          <button
-            onClick={refreshLedger}
-            className="w-8 h-8 flex items-center justify-center border border-white/10 text-white/30 hover:text-white hover:border-white/40 transition-all cursor-pointer"
-            title="Refresh ledger"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href={buildIndexerQueryUrl(CONTRACT_CONFIG.address)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[10px] uppercase tracking-widest border border-[#0000FF]/40 text-[#0000FF] hover:bg-[#0000FF] hover:text-white px-2 py-1 transition-all"
+            >
+              Verify On-Chain ↗
+            </a>
+            <button
+              onClick={refreshLedger}
+              className="w-8 h-8 flex items-center justify-center border border-white/10 text-white/30 hover:text-white hover:border-white/40 transition-all cursor-pointer"
+              title="Refresh ledger"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182" />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
 
@@ -100,14 +110,13 @@ export function ExpenseDashboard() {
           </div>
         )}
 
-        {/* Contract footer */}
         {isConnected && (
-          <div className="mt-4 pt-4 border-t border-white/[0.06] flex flex-wrap gap-x-6 gap-y-1">
+          <div className="mt-4 pt-4 border-t border-white/[0.06] flex flex-wrap gap-x-6 gap-y-1 items-center">
             <span className="font-mono text-[10px] text-white/25">
               Contract: <span className="text-white/50">{truncateAddress(CONTRACT_CONFIG.address, 10)}</span>
             </span>
             <span className="font-mono text-[10px] text-white/25">
-              Network: <span className="text-white/50">{CONTRACT_CONFIG.network.name}</span>
+              Network: <span className="text-[#0000FF] font-bold">{CONTRACT_CONFIG.network.name}</span>
             </span>
             <span className="font-mono text-[10px] text-white/25">
               Circuits: <span className="text-white/50">{CONTRACT_CONFIG.contract.circuits.impure.length + CONTRACT_CONFIG.contract.circuits.pure.length}</span>
