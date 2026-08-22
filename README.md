@@ -4,18 +4,18 @@
     <strong>A Production-Grade, Privacy-Preserving Group Expense Splitting Application Built on the Midnight Network Using Compact Smart Contracts and Zero-Knowledge Proofs.</strong>
   </p>
   <p>
-    <strong>Deployed Contract Address (Preview):</strong> <code>02a8b4cc52da38640550b4e8898725ea6ff6e12c86278a4bb470358ebf524634</code>
+    <strong>Deployed Contract Address (Preprod):</strong> <code>02a8b4cc52da38640550b4e8898725ea6ff6e12c86278a4bb470358ebf524634</code>
   </p>
 
   <p>
     <a href="https://midnight-proj-two.vercel.app"><img src="https://img.shields.io/badge/LIVE_APP-midnight--proj--two.vercel.app-blue?style=for-the-badge" alt="Live App" /></a>
-    <a href="https://explorer.preview.midnight.network"><img src="https://img.shields.io/badge/CONTRACT-Midnight_Explorer-4edea2?style=for-the-badge" alt="Contract" /></a>
-    <a href="https://midnight-proj-two.vercel.app/metrics"><img src="https://img.shields.io/badge/METRICS-Live_Dashboard-f59e0b?style=for-the-badge" alt="Metrics" /></a>
+    <a href="https://indexer.preprod-01.midnight.network/api/v1/graphql"><img src="https://img.shields.io/badge/CONTRACT-Midnight_Preprod-4edea2?style=for-the-badge" alt="Contract" /></a>
+    <a href="https://x.com/ZKExpSplitter"><img src="https://img.shields.io/badge/X_Profile-@ZKExpSplitter-000000?style=for-the-badge&logo=x" alt="X Profile" /></a>
   </p>
 
   <p>
     <a href="https://github.com/Gokul-social/Midnight_proj/actions/workflows/ci.yml"><img src="https://github.com/Gokul-social/Midnight_proj/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
-    <img src="https://img.shields.io/badge/Network-MIDNIGHT_PREVIEW-0000FF?style=for-the-badge" alt="Midnight Preview Network" />
+    <img src="https://img.shields.io/badge/Network-MIDNIGHT_PREPROD-0000FF?style=for-the-badge" alt="Midnight Preprod Network" />
     <img src="https://img.shields.io/badge/Language-Compact_v0.31.1-4F46E5?style=for-the-badge" alt="Compact Language" />
     <img src="https://img.shields.io/badge/ZK_Proofs-Verified-10B981?style=for-the-badge" alt="Zero-Knowledge Proofs" />
     <img src="https://img.shields.io/badge/Tests-34_Passing-10B981?style=for-the-badge" alt="34 Tests Passing" />
@@ -31,7 +31,9 @@
 
 The public ledger records only aggregate settlement verification, making it cryptographically impossible for external observers to reconstruct individual spending patterns, member balances, or transaction histories.
 
-This repository represents a full submission for the **Midnight Network Builder Program (Level 1, Level 2, and Level 3)**.
+This repository represents a full submission for the **Midnight Network Builder Program (Level 1, Level 2, Level 3, and Level 4)**.
+
+> 🐦 **Follow the product on X:** [@ZKExpSplitter](https://x.com/ZKExpSplitter) — building in public on Midnight Network.
 
 ---
 
@@ -43,10 +45,21 @@ This repository represents a full submission for the **Midnight Network Builder 
 
 ---
 
+## Documentation
+
+| Guide | Description |
+| :--- | :--- |
+| [**SETUP.md**](docs/SETUP.md) | Prerequisites, installation, Docker setup, wallet configuration, and Preprod deployment |
+| [**USAGE.md**](docs/USAGE.md) | End-user guide: settling expenses, privacy model, and on-chain verification |
+| [**ARCHITECTURE.md**](docs/ARCHITECTURE.md) | ZK circuit design, witness isolation, privacy boundary enforcement, and security properties |
+
+---
+
 ## Table of Contents
 
 - [Executive Summary](#executive-summary)
 - [Demo Video](#demo-video)
+- [Documentation](#documentation)
 - [Live Deployment Specifications](#live-deployment-specifications)
 - [Application Screenshots](#application-screenshots)
 - [System Architecture & Sequence Flow](#system-architecture--sequence-flow)
@@ -116,14 +129,15 @@ The contract is deployed to **Midnight Preview Network** using the real Midnight
 
 | Attribute | Specification |
 | :--- | :--- |
-| **Network** | Midnight Preview Network (`TestNet`) |
-| **Contract Address** | `02a8b4cc52da38640550b4e8898725ea6ff6e12c86278a4bb470358ebf524634` (Preview Network) |
-| **Group Identifier** | `zk-expense-splitter-preview` |
+| **Network** | Midnight Preprod Network |
+| **Contract Address** | `02a8b4cc52da38640550b4e8898725ea6ff6e12c86278a4bb470358ebf524634` (Preprod) |
+| **Group Identifier** | `zk-expense-splitter-preprod` |
 | **Deployed Circuits** | `initialize_group`, `settle_expense`, `batch_settle`, `verify_settlement_count` |
-| **GraphQL Indexer** | `https://indexer.preview.midnight.network/api/v1/graphql` |
-| **RPC Endpoint** | `https://rpc.preview.midnight.network` |
+| **GraphQL Indexer** | `https://indexer.preprod-01.midnight.network/api/v1/graphql` |
+| **RPC Endpoint** | `https://rpc.preprod-01.midnight.network` |
 | **Frontend Application** | [https://midnight-proj-two.vercel.app](https://midnight-proj-two.vercel.app) |
-| **CI/CD Pipeline** | GitHub Actions Automated Build & Test Suite |
+| **CI/CD Pipeline** | GitHub Actions — 4-job pipeline with coverage, lint, security audit |
+| **Product X Profile** | [@ZKExpSplitter](https://x.com/ZKExpSplitter) |
 
 ### How to Deploy
 
@@ -137,10 +151,10 @@ docker run -d --name midnight-proof-server -p 6300:6300 midnightntwrk/proof-serv
 # 3. Set your wallet seed in .env
 cp .env.example .env
 # Edit .env and set MIDNIGHT_WALLET_SEED to your 24-word mnemonic
-# Get tDUST at: https://faucet.preview.midnight.network/
+# Get tDUST at: https://faucet.preprod-01.midnight.network/
 
-# 4. Deploy — writes real address to deployment-receipt.json
-npm run deploy
+# 4. Deploy to Preprod — writes real address to deployment-receipt.json
+MIDNIGHT_NETWORK=preprod npm run deploy
 ```
 
 The deploy script uses `deployContract()` from `@midnight-ntwrk/midnight-js-contracts`, submits a real transaction, and writes the canonical contract address (assigned by the network) to `deployment-receipt.json`.
@@ -290,7 +304,7 @@ Once deployed, the contract state can be independently queried and verified on t
 
 ### Indexer Query
 
-**GraphQL Endpoint:** `https://indexer.preview.midnight.network/api/v1/graphql`
+**GraphQL Endpoint:** `https://indexer.preprod-01.midnight.network/api/v1/graphql`
 
 Replace `<CONTRACT_ADDRESS>` with the address from [`deployment-receipt.json`](deployment-receipt.json):
 
@@ -339,7 +353,7 @@ The real contract address is written to `deployment-receipt.json` by `npm run de
 | **Node.js** | v22.0.0 or higher | [nodejs.org](https://nodejs.org) |
 | **Docker Desktop** | Latest Release | [docker.com](https://docker.com) |
 | **Compact Toolchain** | v0.31.1 (`compactc`) | [docs.midnight.network](https://docs.midnight.network) |
-| **Lace Wallet** | Preview Network Enabled | [midnight.network](https://docs.midnight.network/develop/tutorial/using-the-dapp-connector/) |
+| **Lace Wallet** | Preprod Network Enabled | [midnight.network](https://docs.midnight.network/develop/tutorial/using-the-dapp-connector/) |
 
 ---
 
@@ -370,7 +384,9 @@ npm install
 npm run dev
 ```
 
-Navigate to `http://localhost:5173` in your browser. Ensure your Lace wallet extension is set to **Midnight Preview Network**.
+Navigate to `http://localhost:5173` in your browser. Ensure your Lace wallet extension is set to **Midnight Preprod Network**.
+
+📖 **Full setup guide:** [docs/SETUP.md](docs/SETUP.md)
 
 ---
 
@@ -485,5 +501,7 @@ This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for d
 ---
 
 <div align="center">
-  <sub>Developed for the Midnight Network Builder Program — Level 1, Level 2, and Level 3 Submissions.</sub>
+  <sub>Developed for the Midnight Network Builder Program — Level 1, Level 2, Level 3, and Level 4 Submissions.</sub>
+  <br/>
+  <sub>Follow on X: <a href="https://x.com/ZKExpSplitter">@ZKExpSplitter</a></sub>
 </div>
