@@ -24,7 +24,9 @@ export const NETWORK_CONFIG = {
   preprod: {
     indexerUri: 'https://indexer.preprod-01.midnight.network/api/v1/graphql',
     proofServerUri: 'https://proof-server.preprod-01.midnight.network',
+    nodeUri: 'https://rpc.preprod-01.midnight.network',
     networkId: 'TestNet' as const,
+    faucet: 'https://faucet.preprod-01.midnight.network/',
   },
   mainnet: {
     indexerUri: 'https://indexer.midnight.network/api/v1/graphql',
