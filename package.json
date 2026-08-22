@@ -1,6 +1,6 @@
 {
   "name": "zk-expense-splitter",
-  "version": "1.0.0",
+  "version": "1.4.0",
   "description": "A privacy-preserving zero-knowledge expense splitter built on the Midnight Network using Compact smart contracts.",
   "main": "dist/index.js",
   "engines": {
@@ -10,11 +10,13 @@
     "compile": "compactc compile contract/src/zk_expense_splitter.compact managed",
     "build:contract": "compactc compile contract/src/zk_expense_splitter.compact managed",
     "test": "jest --testPathPattern=tests/ --forceExit",
+    "test:coverage": "jest --testPathPattern=tests/ --forceExit --coverage --coverageReporters=text --coverageReporters=lcov",
     "test:watch": "jest --testPathPattern=tests/ --watch",
     "deploy": "ts-node src/deploy.ts",
     "build": "tsc --project tsconfig.json",
     "lint": "tsc --noEmit",
     "ci": "npm run lint && npm test",
+    "lint:frontend": "cd frontend && npx oxlint src/ --deny-warnings",
     "postinstall": "node scripts/patch-cjs.js"
   },
   "keywords": [
