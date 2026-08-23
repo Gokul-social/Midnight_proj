@@ -307,9 +307,7 @@ async function deploy(): Promise<void> {
   const networkConfig = NETWORK_CONFIG[DEPLOYMENT_CONFIG.network];
   if (!networkConfig) throw new Error(`Unknown network: "${DEPLOYMENT_CONFIG.network}"`);
 
-  const { fileURLToPath } = await import('url');
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const managedDir = path.resolve(__dirname, '../managed');
+  const managedDir = path.resolve(process.cwd(), 'managed');
 
   // Step 1: Verify compiled artifacts
   console.log('🔍 Verifying Compiled Circuit Artifacts');
@@ -384,13 +382,13 @@ async function deploy(): Promise<void> {
       pureCircuits:   ['verify_settlement_count'],
     },
     keys: {
-      initialize_group:       { provingKey: path.resolve(managedDir, '../managed/keys/initialize_group.prover'),       verificationKey: path.resolve(managedDir, '../managed/keys/initialize_group.verifier') },
-      settle_expense:         { provingKey: path.resolve(managedDir, '../managed/keys/settle_expense.prover'),         verificationKey: path.resolve(managedDir, '../managed/keys/settle_expense.verifier') },
-      batch_settle:           { provingKey: path.resolve(managedDir, '../managed/keys/batch_settle.prover'),           verificationKey: path.resolve(managedDir, '../managed/keys/batch_settle.verifier') },
-      verify_settlement_count:{ provingKey: path.resolve(managedDir, '../managed/keys/verify_settlement_count.prover'),verificationKey: path.resolve(managedDir, '../managed/keys/verify_settlement_count.verifier') },
+      initialize_group:       { provingKey: path.resolve(managedDir, 'keys/initialize_group.prover'),       verificationKey: path.resolve(managedDir, 'keys/initialize_group.verifier') },
+      settle_expense:         { provingKey: path.resolve(managedDir, 'keys/settle_expense.prover'),         verificationKey: path.resolve(managedDir, 'keys/settle_expense.verifier') },
+      batch_settle:           { provingKey: path.resolve(managedDir, 'keys/batch_settle.prover'),           verificationKey: path.resolve(managedDir, 'keys/batch_settle.verifier') },
+      verify_settlement_count:{ provingKey: path.resolve(managedDir, 'keys/verify_settlement_count.prover'),verificationKey: path.resolve(managedDir, 'keys/verify_settlement_count.verifier') },
     },
   };
-  const compiledContract = CompiledContract.make(contractDescriptor, Contract);
+  const compiledContract = (CompiledContract as any).make(contractDescriptor, Contract);
 
   // Witness implementations — called during circuit execution.
   // Must be attached to compiledContract via withWitnesses() before deploying.
@@ -398,7 +396,7 @@ async function deploy(): Promise<void> {
     get_expense_amount: () => 0n,
     get_group_expenses: () => [0n, 0n, 0n, 0n],
   };
-  const compiledContractWithWitnesses = CompiledContract.withWitnesses(compiledContract, witnesses);
+  const compiledContractWithWitnesses = (CompiledContract as any).withWitnesses(compiledContract, witnesses);
 
   const debtHash = deriveGroupDebtHash(DEPLOYMENT_CONFIG.groupId);
   const debtHashHex = `0x${bytesToHex(debtHash)}`;
