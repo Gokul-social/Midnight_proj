@@ -6,8 +6,8 @@
  * via Vite's import.meta.env mechanism (VITE_* prefix required).
  *
  * Network: Midnight Preprod (Level 4 — August 2026)
- * Faucet:  https://faucet.preprod-01.midnight.network/
- * Indexer: https://indexer.preprod-01.midnight.network/api/v1/graphql
+ * Faucet:  https://faucet.preprod.midnight.network/
+ * Indexer: https://indexer.preprod.midnight.network/api/v4/graphql
  */
 
 /** The deployed contract address — sourced from VITE_CONTRACT_ADDRESS in .env */
@@ -18,7 +18,7 @@ const CONTRACT_ADDRESS: string =
 /** Indexer URI — Preprod network */
 const INDEXER_URI: string =
   (import.meta.env['VITE_INDEXER_URI'] as string | undefined) ??
-  'https://indexer.preprod-01.midnight.network/api/v1/graphql';
+  'https://indexer.preprod.midnight.network/api/v4/graphql';
 
 /** Proof server URI — local Docker in dev, or env override */
 const PROOF_SERVER_URI: string =
@@ -35,9 +35,9 @@ export const CONTRACT_CONFIG = {
     id: 'TestNet' as const,
     indexerUri: INDEXER_URI,
     proofServerUri: PROOF_SERVER_URI,
-    nodeUri: 'https://rpc.preprod-01.midnight.network',
-    faucet: 'https://faucet.preprod-01.midnight.network/',
-    explorerBase: 'https://indexer.preprod-01.midnight.network/api/v1/graphql',
+    nodeUri: 'https://rpc.preprod.midnight.network',
+    faucet: 'https://faucet.preprod.midnight.network/',
+    explorerBase: 'https://indexer.preprod.midnight.network/api/v4/graphql',
   },
 
   /** Contract metadata */

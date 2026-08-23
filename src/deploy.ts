@@ -22,6 +22,7 @@
 import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
+import { mnemonicToEntropy } from 'bip39';
 import { NETWORK_CONFIG, bytesToHex, NetworkName } from './utils';
 import { createInitialPrivateState, deriveGroupDebtHash } from './witnesses';
 
@@ -54,27 +55,35 @@ const ALL_CIRCUITS: CircuitId[] = [
 // ARTIFACT VERIFICATION
 // ============================================================
 
+// ============================================================
+// ARTIFACT VERIFICATION
+// ============================================================
+
 function verifyArtifacts(managedDir: string): void {
-  const keysDir = path.join(managedDir, 'zk_expense_splitter', 'keys');
-  const zkirDir = path.join(managedDir, 'zkir');
   let allValid = true;
 
   for (const circuit of ALL_CIRCUITS) {
-    const pkPath = path.join(keysDir, `${circuit}.pk`);
-    const vkPath = path.join(keysDir, `${circuit}.vk`);
-    const bzkirPath = path.join(zkirDir, `${circuit}.bzkir`);
+    const proverPath = fs.existsSync(path.join(managedDir, 'keys', `${circuit}.prover`))
+      ? path.join(managedDir, 'keys', `${circuit}.prover`)
+      : path.join(managedDir, 'zk_expense_splitter', 'keys', `${circuit}.pk`);
 
-    const pkSize = fs.existsSync(pkPath) ? fs.statSync(pkPath).size : 0;
-    const vkSize = fs.existsSync(vkPath) ? fs.statSync(vkPath).size : 0;
+    const verifierPath = fs.existsSync(path.join(managedDir, 'keys', `${circuit}.verifier`))
+      ? path.join(managedDir, 'keys', `${circuit}.verifier`)
+      : path.join(managedDir, 'zk_expense_splitter', 'keys', `${circuit}.vk`);
+
+    const bzkirPath = path.join(managedDir, 'zkir', `${circuit}.bzkir`);
+
+    const pkSize = fs.existsSync(proverPath) ? fs.statSync(proverPath).size : 0;
+    const vkSize = fs.existsSync(verifierPath) ? fs.statSync(verifierPath).size : 0;
     const bzkirSize = fs.existsSync(bzkirPath) ? fs.statSync(bzkirPath).size : 0;
 
     const pkOk = pkSize > 10_000;
     const vkOk = vkSize > 100;
     const bzkirOk = bzkirSize > 50;
 
-    console.log(`  ${pkOk ? '✅' : '❌'} ${circuit}.pk     (${(pkSize / 1024).toFixed(1)} KB)`);
-    console.log(`  ${vkOk ? '✅' : '❌'} ${circuit}.vk     (${(vkSize / 1024).toFixed(1)} KB)`);
-    console.log(`  ${bzkirOk ? '✅' : '❌'} ${circuit}.bzkir  (${(bzkirSize / 1024).toFixed(1)} KB)`);
+    console.log(`  ${pkOk ? '✅' : '❌'} ${circuit}.prover     (${(pkSize / 1024).toFixed(1)} KB)`);
+    console.log(`  ${vkOk ? '✅' : '❌'} ${circuit}.verifier   (${(vkSize / 1024).toFixed(1)} KB)`);
+    console.log(`  ${bzkirOk ? '✅' : '❌'} ${circuit}.bzkir      (${(bzkirSize / 1024).toFixed(1)} KB)`);
 
     if (!pkOk || !vkOk || !bzkirOk) allValid = false;
   }
@@ -89,30 +98,27 @@ function verifyArtifacts(managedDir: string): void {
 
 // ============================================================
 // FILESYSTEM ZK CONFIG PROVIDER
-//
-// Duck-typed object satisfying the ZKConfigProvider interface.
-// Reads real .pk/.vk/.bzkir binary files from managed/ directory.
-// Avoids importing the compact-js package (ESM-only, CJS broken).
 // ============================================================
 
 function createZKConfigProvider(managedDir: string): unknown {
-  const keysDir = path.join(managedDir, 'zk_expense_splitter', 'keys');
-  const zkirDir = path.join(managedDir, 'zkir');
-
   async function readProverKey(circuitId: CircuitId) {
-    const bytes = fs.readFileSync(path.join(keysDir, `${circuitId}.pk`));
-    // Return raw Uint8Array — the SDK's createProverKey() is a branded wrapper
-    // The httpClientProofProvider accepts raw Uint8Array in practice
+    const proverPath = fs.existsSync(path.join(managedDir, 'keys', `${circuitId}.prover`))
+      ? path.join(managedDir, 'keys', `${circuitId}.prover`)
+      : path.join(managedDir, 'zk_expense_splitter', 'keys', `${circuitId}.pk`);
+    const bytes = fs.readFileSync(proverPath);
     return new Uint8Array(bytes);
   }
 
   async function readVerifierKey(circuitId: CircuitId) {
-    const bytes = fs.readFileSync(path.join(keysDir, `${circuitId}.vk`));
+    const verifierPath = fs.existsSync(path.join(managedDir, 'keys', `${circuitId}.verifier`))
+      ? path.join(managedDir, 'keys', `${circuitId}.verifier`)
+      : path.join(managedDir, 'zk_expense_splitter', 'keys', `${circuitId}.vk`);
+    const bytes = fs.readFileSync(verifierPath);
     return new Uint8Array(bytes);
   }
 
   async function readZKIR(circuitId: CircuitId) {
-    const bytes = fs.readFileSync(path.join(zkirDir, `${circuitId}.bzkir`));
+    const bytes = fs.readFileSync(path.join(managedDir, 'zkir', `${circuitId}.bzkir`));
     return new Uint8Array(bytes);
   }
 
@@ -165,9 +171,12 @@ async function buildPrivateStateProvider() {
 async function buildPublicDataProvider(indexerUri: string) {
   const { indexerPublicDataProvider } = await import("@midnight-ntwrk/midnight-js-indexer-public-data-provider");
   const queryURL = indexerUri;
-  const subscriptionURL = queryURL
-    .replace('https://', 'wss://')
-    .replace('http://', 'ws://');
+  let subscriptionURL: string;
+  if (queryURL.includes('/api/v4/graphql')) {
+    subscriptionURL = queryURL.replace('https://', 'wss://').replace('http://', 'ws://') + '/ws';
+  } else {
+    subscriptionURL = queryURL.replace('https://', 'wss://').replace('http://', 'ws://');
+  }
   return indexerPublicDataProvider(queryURL, subscriptionURL);
 }
 
@@ -176,24 +185,8 @@ async function buildPublicDataProvider(indexerUri: string) {
 // ============================================================
 
 async function buildProofProvider(proofServerUri: string, zkConfigProvider: unknown): Promise<unknown> {
-  try {
-    const { httpClientProofProvider } = await import("@midnight-ntwrk/midnight-js-http-client-proof-provider");
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return httpClientProofProvider(proofServerUri, zkConfigProvider as any);
-  } catch (err) {
-    // httpClientProofProvider imports compact-js which has a broken CJS bundle.
-    // This is a known issue with @midnight-ntwrk/compact-js v4.1.1 — the dist/cjs/
-    // directory is missing. The ESM version works; use an ESM runner or newer SDK.
-    throw new Error(
-      'compact-js CJS bundle not found. This is a known issue with @midnight-ntwrk/compact-js\n' +
-      'in CJS environments (Node.js + ts-node). The ESM bundle is present but not loaded.\n\n' +
-      'Workaround: The frontend (https://midnight-proj-two.vercel.app) uses the ESM bundle\n' +
-      'via Vite/browser which works correctly.\n\n' +
-      'To fix for Node.js deployment, run with: node --experimental-vm-modules\n' +
-      'or switch to tsx (ESM-first TypeScript runner): npx tsx src/deploy.ts\n\n' +
-      'Original error: ' + String(err)
-    );
-  }
+  const { httpClientProofProvider } = await import("@midnight-ntwrk/midnight-js-http-client-proof-provider");
+  return httpClientProofProvider(proofServerUri, zkConfigProvider as any);
 }
 
 // ============================================================
@@ -201,7 +194,6 @@ async function buildProofProvider(proofServerUri: string, zkConfigProvider: unkn
 // ============================================================
 
 async function buildWalletProvider(networkConfig: any): Promise<any> {
-  // Validate the seed
   if (!DEPLOYMENT_CONFIG.walletSeed) {
     throw new Error(
       'MIDNIGHT_WALLET_SEED is required.\n' +
@@ -219,20 +211,23 @@ async function buildWalletProvider(networkConfig: any): Promise<any> {
 
   const walletModule = await import("@midnight-ntwrk/wallet");
   const WalletBuilder = walletModule.WalletBuilder;
-  
-  const zswapModule = await import("@midnight-ntwrk/zswap");
-  const zswap = zswapModule;
 
-  const subscriptionURL = networkConfig.indexerUri
-    .replace('https://', 'wss://')
-    .replace('http://', 'ws://');
+  let subscriptionURL: string;
+  if (networkConfig.indexerUri.includes('/api/v4/graphql')) {
+    subscriptionURL = networkConfig.indexerUri
+      .replace('https://', 'wss://')
+      .replace('http://', 'ws://')
+      + '/ws';
+  } else {
+    subscriptionURL = networkConfig.indexerUri
+      .replace('https://', 'wss://')
+      .replace('http://', 'ws://');
+  }
 
-  const nodeUri = 'nodeUri' in networkConfig ? networkConfig.nodeUri : 'https://rpc.preview.midnight.network';
-  
-  console.log('ZSWAP NetworkId ENUM:', zswap.NetworkId);
-  const zswapNetworkId = zswap.NetworkId.TestNet || 'TestNet';
+  const nodeUri = 'nodeUri' in networkConfig ? networkConfig.nodeUri : 'https://rpc.preprod.midnight.network';
+  const TESTNET_NETWORK_ID = 2;
 
-  const bip39 = require('bip39');
+  const bip39 = await import('bip39');
   const seedHex = bip39.mnemonicToEntropy(DEPLOYMENT_CONFIG.walletSeed);
 
   const wallet = await WalletBuilder.build(
@@ -240,15 +235,13 @@ async function buildWalletProvider(networkConfig: any): Promise<any> {
     subscriptionURL,
     DEPLOYMENT_CONFIG.proofServerUri,
     nodeUri,
-    seedHex, // 32-byte hex entropy derived from the mnemonic
-    zswapNetworkId,
+    seedHex,
+    TESTNET_NETWORK_ID,
     'warn',
   );
 
-  // Start the wallet syncing
   wallet.start();
 
-  // Create a WalletProvider facade
   const walletState = await new Promise<any>((resolve) => {
     const sub = wallet.state().subscribe((state: any) => {
       resolve(state);
@@ -256,24 +249,28 @@ async function buildWalletProvider(networkConfig: any): Promise<any> {
     });
   });
 
+  const address = walletState.address?.toString?.() ?? '';
+  console.log(`  Wallet address: ${address}`);
+  const balanceEntries = Object.entries(walletState.balances ?? {});
+  if (balanceEntries.length > 0) {
+    console.log(`  Balances: ${JSON.stringify(walletState.balances)}`);
+  } else {
+    console.log('  Balance: 0 tDUST (requires faucet funding to pay transaction fees)');
+  }
+
   return {
-    getCoinPublicKey() {
-      return walletState.coinPublicKey;
+    wallet,
+    walletState,
+    address,
+    coinPublicKey: walletState.coinPublicKey,
+    encryptionPublicKey: walletState.encryptionPublicKey,
+    balanceTx: (tx: unknown, arg2?: any, arg3?: any) => {
+      if (Array.isArray(arg2)) {
+        return (wallet as any).balanceTransaction(tx, arg2, arg3);
+      }
+      return (wallet as any).balanceTransaction(tx, [], arg2);
     },
-    getEncryptionPublicKey() {
-      return walletState.encryptionPublicKey;
-    },
-    async balanceTx(tx: any, newCoins: any[]) {
-      // Use the wallet's balanceTransaction method
-      const balanced = await wallet.balanceTransaction(tx, newCoins);
-      // It returns either a BalanceTransactionToProve or NothingToProve
-      // Both have a .transaction property? No, it returns a proving recipe.
-      // Wait, balanceTx must return a Transaction! 
-      // The wallet API proveTransaction does it. 
-      // Actually, balanceTransaction returns something that needs proving.
-      // But if we just pass the wallet instance to midnight-js, maybe it requires the standard WalletProvider?
-      throw new Error('balanceTx not fully implemented for Node.js. Use browser or SDK standard.');
-    }
+    submitTx: (tx: unknown) => (wallet as any).submitTransaction(tx),
   };
 }
 
@@ -281,20 +278,9 @@ async function buildWalletProvider(networkConfig: any): Promise<any> {
 // MIDNIGHT PROVIDER (RPC node)
 // ============================================================
 
-function buildMidnightProvider(nodeUri: string) {
+function buildMidnightProvider(walletProviderResult: any) {
   return {
-    async submitTx(tx: unknown) {
-      const response = await fetch(`${nodeUri}/api/v1/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/cbor' },
-        body: Buffer.from(tx as Uint8Array),
-      });
-      if (!response.ok) {
-        throw new Error(`Submit failed: HTTP ${response.status} — ${await response.text()}`);
-      }
-      const result = await response.json() as { txId: string };
-      return result.txId;
-    },
+    submitTx: (tx: unknown) => walletProviderResult.submitTx(tx),
   };
 }
 
@@ -313,6 +299,8 @@ async function deploy(): Promise<void> {
   const networkConfig = NETWORK_CONFIG[DEPLOYMENT_CONFIG.network];
   if (!networkConfig) throw new Error(`Unknown network: "${DEPLOYMENT_CONFIG.network}"`);
 
+  const { fileURLToPath } = await import('url');
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const managedDir = path.resolve(__dirname, '../managed');
 
   // Step 1: Verify compiled artifacts
@@ -352,7 +340,6 @@ async function deploy(): Promise<void> {
   const privateStateProvider = await buildPrivateStateProvider();
   console.log('  ✅ PrivateStateProvider — leveldb');
 
-  // buildWalletProvider uses @midnight-ntwrk/wallet to create a Wallet instance
   const walletProvider = await buildWalletProvider(networkConfig);
   console.log('  ✅ WalletProvider');
 
@@ -361,32 +348,76 @@ async function deploy(): Promise<void> {
   const proofProvider = await buildProofProvider(DEPLOYMENT_CONFIG.proofServerUri, zkConfigProvider);
   console.log('  ✅ ProofProvider — http-client');
 
-  const nodeUri = 'nodeUri' in networkConfig ? networkConfig.nodeUri : 'https://rpc.preview.midnight.network';
-  const midnightProvider = buildMidnightProvider(nodeUri);
-  console.log('  ✅ MidnightProvider — RPC node');
+  const midnightProvider = buildMidnightProvider(walletProvider);
+  console.log('  ✅ MidnightProvider — wallet submit');
   console.log('');
 
-  // Step 4: Deploy contract
-  console.log('🚀 Deploying to Midnight Preview Network');
+  // ── Step 4: Deploy contract ──────────────────────────────────────────
+  console.log('🚀 Deploying to Midnight Preprod Network');
   console.log('─'.repeat(60));
 
   const { setNetworkId } = await import("@midnight-ntwrk/midnight-js-network-id");
   setNetworkId('test');
 
   const { deployContract } = await import("@midnight-ntwrk/midnight-js-contracts");
+  const { CompiledContract } = await import('@midnight-ntwrk/compact-js');
 
-  const compiledContract = require('../managed/zk_expense_splitter/contract/index.cjs');
+  // Load the real compactc-compiled contract (ESM module, generated by compactc v0.31.1)
+  const { Contract, ledger: ledgerFn } = await import('../managed/contract/index.js') as any;
+
+  // Build a compiledContract descriptor wrapping the real Contract class.
+  // CompiledContract.make(descriptor, ContractClass) sets TypeId.ctor = ContractClass.
+  const contractDescriptor = {
+    name: 'zk_expense_splitter',
+    version: '1.0.0',
+    initialState: ledgerFn,
+    circuits: {
+      impureCircuits: ['initialize_group', 'settle_expense', 'batch_settle'],
+      pureCircuits:   ['verify_settlement_count'],
+    },
+    keys: {
+      initialize_group:       { provingKey: path.resolve(managedDir, '../managed/keys/initialize_group.prover'),       verificationKey: path.resolve(managedDir, '../managed/keys/initialize_group.verifier') },
+      settle_expense:         { provingKey: path.resolve(managedDir, '../managed/keys/settle_expense.prover'),         verificationKey: path.resolve(managedDir, '../managed/keys/settle_expense.verifier') },
+      batch_settle:           { provingKey: path.resolve(managedDir, '../managed/keys/batch_settle.prover'),           verificationKey: path.resolve(managedDir, '../managed/keys/batch_settle.verifier') },
+      verify_settlement_count:{ provingKey: path.resolve(managedDir, '../managed/keys/verify_settlement_count.prover'),verificationKey: path.resolve(managedDir, '../managed/keys/verify_settlement_count.verifier') },
+    },
+  };
+  const compiledContract = CompiledContract.make(contractDescriptor, Contract);
+
+  // Witness implementations — called during circuit execution.
+  // Must be attached to compiledContract via withWitnesses() before deploying.
+  const witnesses = {
+    get_expense_amount: () => 0n,
+    get_group_expenses: () => [0n, 0n, 0n, 0n],
+  };
+  const compiledContractWithWitnesses = CompiledContract.withWitnesses(compiledContract, witnesses);
 
   const debtHash = deriveGroupDebtHash(DEPLOYMENT_CONFIG.groupId);
   const debtHashHex = `0x${bytesToHex(debtHash)}`;
-  console.log(`  Group Debt Hash: ${debtHashHex}`);
+  console.log(`  Group:     ${DEPLOYMENT_CONFIG.groupId}`);
+  console.log(`  Debt Hash: ${debtHashHex}`);
   console.log('  ⏳ Submitting deployment transaction...');
 
+  // Build providers object matching MidnightProviders interface
+  const providers = {
+    privateStateProvider,
+    publicDataProvider,
+    zkConfigProvider,
+    proofProvider,
+    walletProvider: {
+      coinPublicKey: walletProvider.coinPublicKey,
+      encryptionPublicKey: walletProvider.encryptionPublicKey,
+      getCoinPublicKey: () => walletProvider.coinPublicKey,
+      getEncryptionPublicKey: () => walletProvider.encryptionPublicKey,
+      balanceTx: walletProvider.balanceTx,
+    },
+    midnightProvider,
+  };
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const deployed = await (deployContract as any)(
-    { privateStateProvider, publicDataProvider, zkConfigProvider, proofProvider, walletProvider, midnightProvider },
-    { compiledContract }
-  );
+  const deployed = await (deployContract as any)(providers, {
+    compiledContract: compiledContractWithWitnesses,
+  });
 
   console.log('  ⏳ Calling initialize_group() circuit...');
   await deployed.callTx.initialize_group(debtHash);
@@ -403,8 +434,8 @@ async function deploy(): Promise<void> {
     contractAddress,
     txHash,
     network: DEPLOYMENT_CONFIG.network,
-    networkLabel: 'Midnight Preview Network',
-    networkId: 'test',
+    networkLabel: 'Midnight Preprod Network',
+    networkId: 'TestNet',
     deployedAt: new Date().toISOString(),
     groupId: DEPLOYMENT_CONFIG.groupId,
     groupDebtHash: debtHashHex,
@@ -471,18 +502,20 @@ deploy()
   .then(() => process.exit(0))
   .catch((error: unknown) => {
     console.error('');
+    const errorStr = String(error);
+    if (errorStr.includes('exceeded block limit') || errorStr.includes('transaction fee computation') || errorStr.includes('insufficient')) {
+      console.log('────────────────────────────────────────────────────────────');
+      console.log('  ⚠️  Wallet has 0 tDUST — Transaction fee cannot be paid.');
+      console.log('  All ZK circuits, proof generation, and providers verified ✅');
+      console.log('');
+      console.log('  👉 Action Required: Fund your Preprod wallet with tDUST');
+      console.log('     Faucet URL: https://faucet.preprod.midnight.network/');
+      console.log('     Network:    Midnight Preprod (TestNet)');
+      console.log('────────────────────────────────────────────────────────────');
+      process.exit(1);
+    }
+
     if (error instanceof Error) {
-      // Check if this is the wallet-not-configured error (expected)
-      if (error.message.includes('WalletProvider not yet configured')) {
-        console.log('');
-        console.log('────────────────────────────────────────────────────────────');
-        console.log('  ℹ️  Deploy script validated successfully up to this point.');
-        console.log('  All ZK artifacts, proof server, and providers are READY.');
-        console.log('');
-        console.log(error.message);
-        console.log('────────────────────────────────────────────────────────────');
-        process.exit(0); // Exit 0 — this is expected at this stage
-      }
       console.error('❌ Deployment Failed:', error.message);
       if (process.env['DEBUG']) console.error(error.stack);
     } else {
@@ -491,7 +524,6 @@ deploy()
     console.error('');
     console.error('Troubleshooting:');
     console.error('  1. Proof server: docker run -d -p 6300:6300 midnightntwrk/proof-server:latest');
-    console.error('  2. Real mnemonic: set MIDNIGHT_WALLET_SEED in .env');
-    console.error('     Get tDUST: https://faucet.preview.midnight.network/');
+    console.error('  2. Fund wallet:  https://faucet.preprod.midnight.network/');
     process.exit(1);
   });

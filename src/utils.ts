@@ -22,11 +22,11 @@ export const NETWORK_CONFIG = {
     faucet: 'https://faucet.preview.midnight.network/',
   },
   preprod: {
-    indexerUri: 'https://indexer.preprod-01.midnight.network/api/v1/graphql',
-    proofServerUri: 'https://proof-server.preprod-01.midnight.network',
-    nodeUri: 'https://rpc.preprod-01.midnight.network',
+    indexerUri: 'https://indexer.preprod.midnight.network/api/v4/graphql',
+    proofServerUri: 'http://localhost:6300',
+    nodeUri: 'https://rpc.preprod.midnight.network',
     networkId: 'TestNet' as const,
-    faucet: 'https://faucet.preprod-01.midnight.network/',
+    faucet: 'https://faucet.preprod.midnight.network/',
   },
   mainnet: {
     indexerUri: 'https://indexer.midnight.network/api/v1/graphql',
