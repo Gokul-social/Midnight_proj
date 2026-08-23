@@ -247,18 +247,18 @@ async function buildWalletProvider(networkConfig: any): Promise<any> {
 
   const address = walletState.address?.toString?.() ?? '';
   
-  // Derive the unshielded address (mn_addr_test1...) required by the Midnight Faucet
+  // Derive the unshielded address (mn_addr_preprod1...) required by the Midnight Preprod Faucet
   let unshieldedAddress = '';
   try {
     const addrFormat = await import('@midnight-ntwrk/wallet-sdk-address-format');
     const addrObj = new addrFormat.UnshieldedAddress(Buffer.from(seedHex, 'hex'));
-    unshieldedAddress = addrFormat.MidnightBech32m.encode('test', addrObj).asString();
+    unshieldedAddress = addrFormat.MidnightBech32m.encode('preprod', addrObj).asString();
   } catch {
     unshieldedAddress = address;
   }
 
-  console.log(`  Unshielded Address (Faucet): ${unshieldedAddress}`);
-  console.log(`  Shielded Address:            ${address}`);
+  console.log(`  Unshielded Address (Preprod Faucet): ${unshieldedAddress}`);
+  console.log(`  Shielded Address:                   ${address}`);
   const balanceEntries = Object.entries(walletState.balances ?? {});
   if (balanceEntries.length > 0) {
     console.log(`  Balances: ${JSON.stringify(walletState.balances)}`);
