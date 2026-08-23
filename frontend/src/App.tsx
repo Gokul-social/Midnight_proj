@@ -66,11 +66,10 @@ function Nav({ activeSection, setActiveSection }: {
           GITHUB
         </a>
         <a
-          href="https://x.com/ZKExpSplitter"
+          href="https://x.com/CipherVault_Fi"
           target="_blank"
           rel="noopener noreferrer"
-          className="nav-link"
-          title="Follow on X"
+          className="nav-link nav-link-x"
         >
           X / TWITTER
         </a>

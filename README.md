@@ -10,7 +10,7 @@
   <p>
     <a href="https://midnight-proj-two.vercel.app"><img src="https://img.shields.io/badge/LIVE_APP-midnight--proj--two.vercel.app-blue?style=for-the-badge" alt="Live App" /></a>
     <a href="https://indexer.preprod-01.midnight.network/api/v1/graphql"><img src="https://img.shields.io/badge/CONTRACT-Midnight_Preprod-4edea2?style=for-the-badge" alt="Contract" /></a>
-    <a href="https://x.com/ZKExpSplitter"><img src="https://img.shields.io/badge/X_Profile-@ZKExpSplitter-000000?style=for-the-badge&logo=x" alt="X Profile" /></a>
+    <a href="https://x.com/CipherVault_Fi"><img src="https://img.shields.io/badge/X_Profile-@CipherVault__Fi-000000?style=for-the-badge&logo=x" alt="X Profile" /></a>
   </p>
 
   <p>
@@ -33,7 +33,7 @@ The public ledger records only aggregate settlement verification, making it cryp
 
 This repository represents a full submission for the **Midnight Network Builder Program (Level 1, Level 2, Level 3, and Level 4)**.
 
-> 🐦 **Follow the product on X:** [@ZKExpSplitter](https://x.com/ZKExpSplitter) — building in public on Midnight Network.
+> 🐦 **Follow the product on X:** [@CipherVault_Fi](https://x.com/CipherVault_Fi) — building in public on Midnight Network.
 
 ---
 
@@ -137,7 +137,7 @@ The contract is deployed to **Midnight Preview Network** using the real Midnight
 | **RPC Endpoint** | `https://rpc.preprod-01.midnight.network` |
 | **Frontend Application** | [https://midnight-proj-two.vercel.app](https://midnight-proj-two.vercel.app) |
 | **CI/CD Pipeline** | GitHub Actions — 4-job pipeline with coverage, lint, security audit |
-| **Product X Profile** | [@ZKExpSplitter](https://x.com/ZKExpSplitter) |
+| **Product X Profile** | [@CipherVault_Fi](https://x.com/CipherVault_Fi) |
 
 ### How to Deploy
 
@@ -503,5 +503,5 @@ This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for d
 <div align="center">
   <sub>Developed for the Midnight Network Builder Program — Level 1, Level 2, Level 3, and Level 4 Submissions.</sub>
   <br/>
-  <sub>Follow on X: <a href="https://x.com/ZKExpSplitter">@ZKExpSplitter</a></sub>
+  <sub>Follow on X: <a href="https://x.com/CipherVault_Fi">@CipherVault_Fi</a></sub>
 </div>

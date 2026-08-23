@@ -21,7 +21,7 @@ Format follows [Conventional Commits](https://www.conventionalcommits.org/).
   - `docs/SETUP.md`: Step-by-step setup guide with Docker, wallet, and Preprod deployment
   - `docs/USAGE.md`: User-facing guide explaining privacy model and settlement flow
   - `docs/ARCHITECTURE.md`: Technical deep-dive into ZK circuits, witness isolation, and security
-- **Product X Profile** — [@ZKExpSplitter](https://x.com/ZKExpSplitter) created and linked in README
+- **Product X Profile** — [@CipherVault_Fi](https://x.com/CipherVault_Fi) created and linked in README
 - **"Verify On-Chain" button** in `ExpenseDashboard` — opens Preprod GraphQL indexer pre-filled with contract query
 - **CI/CD Hardened Pipeline** (`.github/workflows/ci.yml`)
   - New `security-audit` job: `npm audit` on backend + frontend
